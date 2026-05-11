@@ -8,8 +8,9 @@
         <div class="settings-container">
             <div class="setting-card">
                 <div class="setting-info">
-                    <span class="icon">{{ isDark ? '🌙' : '☀️' }}</span>
-                    <span class="setting-label">Appearance</span>
+                    <span class="icon">
+                        <i :class="isDark ? 'pi pi-moon' : 'pi pi-sun'"></i>
+                    </span> <span class="setting-label">Appearance</span>
                 </div>
 
                 <button @click="toggleTheme" class="toggle-btn" :class="{ 'is-active': isDark }">

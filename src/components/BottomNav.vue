@@ -1,29 +1,29 @@
 <template>
   <nav class="bottom-nav">
     <router-link to="/" class="nav-item">
-      <span class="icon">🧭</span>
+      <span class="icon"><i class="pi pi-compass"></i></span>
       <span class="label">Discover</span>
     </router-link>
 
     <router-link to="/history" class="nav-item">
-      <span class="icon">🕒</span>
+      <span class="icon"><i class="pi pi-history"></i></span>
       <span class="label">History</span>
     </router-link>
 
     <div class="nav-item token-center">
       <div class="token-badge">
-        <span class="star">★</span>
+        <span class="star"><i class="pi pi-star-fill"></i></span>
         <span class="amount">XXX</span>
       </div>
     </div>
 
     <router-link to="/messages" class="nav-item">
-      <span class="icon">💬</span>
+      <span class="icon"><i class="pi pi-comments"></i></span>
       <span class="label">Messages</span>
     </router-link>
 
     <router-link to="/profile" class="nav-item">
-      <span class="icon">👤</span>
+      <span class="icon"><i class="pi pi-user"></i></span>
       <span class="label">Profile</span>
     </router-link>
   </nav>
