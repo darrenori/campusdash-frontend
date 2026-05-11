@@ -14,7 +14,7 @@
 
         <div class="actions">
             <div class="tokens">
-                <span class="star">★</span> XXX Tokens
+                <span class="star"><i class="pi pi-star-fill"></i></span> XXX Tokens
             </div>
             <button class="accept-btn">Accept</button>
         </div>
