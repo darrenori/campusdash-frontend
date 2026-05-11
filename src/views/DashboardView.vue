@@ -28,12 +28,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import CampusMap from '../components/MapView.vue'
-import RequestList from '../components/ListView.vue'
-import BottomNav from '../components/BottomNav.vue'
+import { ref } from 'vue';
+import CampusMap from '../components/MapView.vue';
+import RequestList from '../components/ListView.vue';
+import BottomNav from '../components/BottomNav.vue';
 
-const viewMode = ref('map') 
+const viewMode = ref('map');
 </script>
 
 <style scoped>
