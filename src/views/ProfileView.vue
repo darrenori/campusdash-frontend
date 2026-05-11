@@ -9,11 +9,11 @@
             <div class="setting-card">
                 <div class="setting-info">
                     <span class="icon">
-                        <i :class="isDark ? 'pi pi-moon' : 'pi pi-sun'"></i>
+                        <i :class="themeStore.isDark ? 'pi pi-moon' : 'pi pi-sun'"></i>
                     </span> <span class="setting-label">Appearance</span>
                 </div>
 
-                <button @click="toggleTheme" class="toggle-btn" :class="{ 'is-active': isDark }">
+                <button @click="themeStore.toggleTheme()" class="toggle-btn" :class="{ 'is-active': themeStore.isDark }">
                     <div class="toggle-knob"></div>
                 </button>
             </div>
@@ -24,34 +24,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import BottomNav from '../components/BottomNav.vue'
+import BottomNav from '../components/BottomNav.vue';
+import { useThemeStore } from '../stores/theme';
 
-const isDark = ref(true)
-
-const toggleTheme = () => {
-    isDark.value = !isDark.value
-
-    if (!isDark.value) {
-        document.documentElement.setAttribute('data-theme', 'light')
-        localStorage.setItem('theme', 'light')
-    } else {
-        document.documentElement.removeAttribute('data-theme')
-        localStorage.setItem('theme', 'dark')
-    }
-}
-
-onMounted(() => {
-    const savedTheme = localStorage.getItem('theme')
-
-    if (savedTheme === 'light') {
-        isDark.value = false
-        document.documentElement.setAttribute('data-theme', 'light')
-    } else {
-        // Default to Dark Mode
-        document.documentElement.removeAttribute('data-theme')
-    }
-})
+const themeStore = useThemeStore();
 </script>
 
 <style scoped>

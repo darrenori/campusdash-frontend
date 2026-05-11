@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import DeliveryRequestCard from './DeliveryRequestCard.vue'
+import DeliveryRequestCard from './DeliveryRequestCard.vue';
 </script>
 
 <style scoped>
