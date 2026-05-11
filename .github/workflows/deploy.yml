@@ -3,7 +3,7 @@ name: Deploy
 on:
   workflow_run:
     workflows: [Checks]
-    branches: [main]
+    branches: [milestone-1]
     types: [completed]
   workflow_dispatch:
 
