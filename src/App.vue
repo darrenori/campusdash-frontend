@@ -1,12 +1,20 @@
 <template>
   <div class="min-h-screen bg-gray-50 font-sans text-gray-900">
 
-    <router-view></router-view>
+    <router-view />
 
   </div>
 </template>
 
 <script setup>
+import { onMounted } from 'vue';
+import { useThemeStore } from './stores/theme';
+
+const themeStore = useThemeStore();
+
+onMounted(() => {
+  themeStore.initTheme();
+});
 </script>
 
 <style>
