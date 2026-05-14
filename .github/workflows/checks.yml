@@ -1,4 +1,5 @@
-name: Checks
+name: Quality Checks
+run-name: Quality checks for ${{ github.ref_name }}
 
 on:
   push:
