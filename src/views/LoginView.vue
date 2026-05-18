@@ -13,12 +13,13 @@
           <!-- IconField PrimeVue Component for placing icons inside input fields -->
           <IconField>
             <InputIcon class="pi pi-user" />
-            <InputText placeholder="Username" class="input-field" />
+            <InputText v-model="username" placeholder="Username" class="input-field" autocomplete="username" />
           </IconField>
 
           <IconField>
             <InputIcon class="pi pi-lock" />
-            <InputText placeholder="Password" class="input-field" type="password" />
+            <Password v-model="password" placeholder="Password" class="input-field" :feedback="false" fluid toggleMask
+              :inputProps="{ autocomplete: 'current-password' }" />
           </IconField>
         </div>
 
@@ -27,17 +28,25 @@
           <button type="submit" class="login-btn">Login</button>
         </div>
 
-        <button type="button" class="register-btn">New User</button>
+        <RouterLink to="/register" class="register-btn">New User</RouterLink>
       </form>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
+
 // Import PrimeVue components
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import Password from 'primevue/password';
+
+// Form fields
+const username = ref('');
+const password = ref('');
+
 </script>
 
 <style scoped>
@@ -100,6 +109,40 @@ import InputText from 'primevue/inputtext';
   pointer-events: none;
 }
 
+/* 
+  Transition from RegisterView to LoginView
+  Waves slide in towards center
+*/
+@media (max-height: 750px) {
+  .top-waves {
+    animation: slideTopIn 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+  }
+
+  .bottom-waves {
+    animation: slideBottomIn 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+  }
+}
+
+@keyframes slideTopIn {
+  from {
+    transform: translateY(-10vh);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideBottomIn {
+  from {
+    transform: translateY(10vh);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Form Styling */
 .input-container {
   display: flex;
@@ -108,8 +151,8 @@ import InputText from 'primevue/inputtext';
   /* PrimeVue Theming Overrides */
   --p-iconfield-icon-color: #4d4d4d;
   --p-inputtext-background: #E5E7EB;
-  --p-inputtext-color: #003D7C;
-  --p-inputtext-placeholder-color: #003D7C;
+  --p-inputtext-color: #4d4d4d;
+  --p-inputtext-placeholder-color: #4d4d4d;
   --p-inputtext-border-color: transparent;
   --p-inputtext-focus-border-color: #EF7C00;
 }
@@ -132,6 +175,9 @@ import InputText from 'primevue/inputtext';
 
 .login-btn,
 .register-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
   border-radius: 10px;
   font-weight: bold;
   cursor: pointer;
