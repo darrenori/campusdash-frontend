@@ -24,7 +24,7 @@
         </div>
 
         <div class="form-actions">
-          <a href="#" class="forgot-link">Forgot Password?</a>
+          <RouterLink to="/forgot-password" class="forgot-link">Forgot Password?</RouterLink>
           <button type="submit" class="login-btn">Login</button>
         </div>
 
@@ -63,12 +63,6 @@ const password = ref('');
   /* Prevent waves from causing scrollbars */
   position: relative;
   overflow: hidden;
-}
-
-.bottom-waves {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
 }
 
 .content-wrapper {

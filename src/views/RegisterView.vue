@@ -83,12 +83,6 @@ const isSubmitDisabled = computed(() => {
     overflow: hidden;
 }
 
-.bottom-waves {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-}
-
 .content-wrapper {
     width: 100%;
     max-width: 450px;
@@ -218,6 +212,5 @@ const isSubmitDisabled = computed(() => {
     background-color: #EF7C00;
     color: white;
     border: 1px solid #EF7C00;
-    width: 100%;
 }
 </style>
