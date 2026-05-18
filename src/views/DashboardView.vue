@@ -55,9 +55,12 @@ const viewMode = ref('map');
     pointer-events: none;
 }
 
+/* 
+    Map and List View Switch 
+    White text on blue background (Inactive state)
+*/
 .segmented-control {
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-color);
+    background-color: #003D7C;
     padding: 4px;
     border-radius: 30px;
     display: flex;
@@ -68,7 +71,7 @@ const viewMode = ref('map');
 .segment-btn {
     background: transparent;
     border: none;
-    color: var(--text-muted);
+    color: #FFFFFF;
     padding: 8px 24px;
     border-radius: 26px;
     font-weight: 600;
@@ -77,9 +80,14 @@ const viewMode = ref('map');
     transition: all 0.2s ease;
 }
 
+/* 
+    Map and List View Buttons 
+    Blue text on white background (Active state)
+*/
+
 .segment-btn.active {
-    background-color: var(--text-main);
-    color: var(--bg-surface);
+    background-color: #FFFFFF;
+    color: #003D7C;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -92,9 +100,8 @@ const viewMode = ref('map');
     position: fixed;
     bottom: 90px;
     right: 20px;
-    background-color: #840c8f;
-    box-shadow: 0 4px 12px rgba(151, 16, 185, 0.4);
-
+    background-color: #EF7C00;
+    box-shadow: 0 4px 12px rgba(100, 53, 2, 0.4);
     color: white;
     border: none;
     border-radius: 30px;
@@ -103,9 +110,8 @@ const viewMode = ref('map');
     font-weight: bold;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     cursor: pointer;
-    z-index: 900;
     transition: transform 0.2s ease;
 }
 

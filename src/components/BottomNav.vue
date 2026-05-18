@@ -10,10 +10,10 @@
       <span class="label">History</span>
     </router-link>
 
-    <div class="nav-item token-center">
-      <div class="token-badge">
+    <div class="nav-item">
+      <div class="points-badge">
         <span class="star"><i class="pi pi-star-fill"></i></span>
-        <span class="amount">XXX</span>
+        <span class="amount">10 PTS</span>
       </div>
     </div>
 
@@ -36,9 +36,7 @@
   left: 0;
   width: 100%;
   height: 70px;
-  background: var(--bg-surface);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border-color);
+  background: #003D7C;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -50,19 +48,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: #FFFFFF;
   text-decoration: none;
   cursor: pointer;
   flex: 1;
   transition: color 0.2s ease;
 }
 
+/* Currently selected tab */
 .router-link-active {
-  color: #10b981;
+  color: #EF7C00;
 }
 
 .icon {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   margin-bottom: 2px;
 }
 
@@ -71,20 +70,16 @@
   font-weight: 500;
 }
 
-.token-center {
-  flex: 1.5;
-  cursor: default;
-}
-
-.token-badge {
-  background-color: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+/* Current points */
+.points-badge {
+  background-color: #FFFFFF;
+  color: #EF7C00;
   padding: 8px 16px;
   border-radius: 20px;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
