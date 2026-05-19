@@ -48,7 +48,7 @@ const router = createRouter({
 let hasCheckedAuth = false;
 
 // Redirect users back to login if they visit a protected route without being authenticated
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, from) => {
     const authStore = useAuthStore();
 
     // Check cookie validity before proceding
@@ -67,12 +67,12 @@ router.beforeEach(async (to, from, next) => {
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
         // Entering protected page while logged out
-        next('/login');
-    } else if (to.meta.requiresAuth === false && authStore.isAuthenticated) {
+        return '/login';
+    }
+
+    if (to.meta.requiresAuth === false && authStore.isAuthenticated) {
         // Revisiting Login/Register screen while logged in
-        next('/');
-    } else {
-        next();
+        return '/';
     }
 });
 
