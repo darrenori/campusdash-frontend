@@ -8,7 +8,9 @@
                 <img src="../assets/logos/logo-full.svg" alt="CampusDash Logo" class="cd-logo" />
             </div>
 
-            <form class="register-form" @submit.prevent>
+            <form class="register-form" @submit.prevent="handleRegister">
+                <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
                 <div class="input-container">
                     <!-- IconField PrimeVue Component for placing icons inside input fields -->
                     <IconField>
@@ -36,7 +38,9 @@
                 </div>
 
                 <div class="btn-container">
-                    <button type="submit" class="register-btn" :disabled="isSubmitDisabled">Register</button>
+                    <button type="submit" class="register-btn" :disabled="isSubmitDisabled">
+                        {{ isLoading ? 'Registering...' : 'Register' }}
+                    </button>
                     <RouterLink to="/login" class="login-btn">Existing User</RouterLink>
                 </div>
 
@@ -47,12 +51,19 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { apiRequest } from '../utils/api';
+
+const router = useRouter();
 
 // Import PrimeVue components
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
+import { useToast } from 'primevue/usetoast';
+
+const toast = useToast();
 
 // Form fields
 const username = ref('');
@@ -60,11 +71,47 @@ const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
 
-// Check that the password and confirm password fields match and are not empty before allowing form submission
+// UI State
+const isLoading = ref(false);
+const errorMsg = ref('');
+
 const isSubmitDisabled = computed(() => {
-    if (!password.value || !confirmPassword.value) return true;
+    // Check that the fields are not empty before allowing form submission
+    if (!username.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value || isLoading.value) return true;
+
+    // Check that the password and confirm password fields match before allowing form submission
     return password.value !== confirmPassword.value;
 });
+
+// Function to submit registration form data to the backend API
+const handleRegister = async () => {
+    if (isSubmitDisabled.value) return;
+
+    isLoading.value = true;
+    errorMsg.value = '';
+
+    try {
+        const response = await apiRequest.post('/auth/register', {
+            username: username.value.trim(),
+            email: email.value.trim(),
+            password: password.value
+        });
+
+        toast.add({
+            severity: 'success',
+            summary: 'Account Registered!',
+            detail: response.message || 'Redirecting to login...',
+            life: 5000
+        });
+
+        // Redirect to login page when successfully registered
+        router.push('/login');
+    } catch (err) {
+        errorMsg.value = err.message || 'An error has occurred.';
+    } finally {
+        isLoading.value = false;
+    }
+};
 </script>
 
 <style scoped>
@@ -153,6 +200,14 @@ const isSubmitDisabled = computed(() => {
     to {
         transform: translateY(10vh);
     }
+}
+
+/* Error Message Styling */
+.error-msg {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: red;
+    margin-top: 0;
 }
 
 /* Form Styling */

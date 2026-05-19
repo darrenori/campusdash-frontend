@@ -8,7 +8,9 @@
         <img src="../assets/logos/logo-full.svg" alt="CampusDash Logo" class="cd-logo" />
       </div>
 
-      <form class="login-form" @submit.prevent>
+      <form class="login-form" @submit.prevent="handleLogin">
+        <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
         <div class="input-container">
           <!-- IconField PrimeVue Component for placing icons inside input fields -->
           <IconField>
@@ -25,7 +27,9 @@
 
         <div class="form-actions">
           <RouterLink to="/forgot-password" class="forgot-link">Forgot Password?</RouterLink>
-          <button type="submit" class="login-btn">Login</button>
+          <button type="submit" class="login-btn" :disabled="isSubmitDisabled">
+            {{ isLoading ? 'Logging in...' : 'Login' }}
+          </button>
         </div>
 
         <RouterLink to="/register" class="register-btn">New User</RouterLink>
@@ -35,18 +39,64 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { apiRequest } from '../utils/api';
+import { useAuthStore } from '../stores/auth';
+
+const router = useRouter();
+const authStore = useAuthStore();
 
 // Import PrimeVue components
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
+import { useToast } from 'primevue/usetoast';
+
+const toast = useToast();
 
 // Form fields
 const username = ref('');
 const password = ref('');
 
+// UI State
+const isLoading = ref(false);
+const errorMsg = ref('');
+
+const isSubmitDisabled = computed(() => {
+  return !username.value || !password.value || isLoading.value;
+});
+
+// Function to submit login form data to the backend API
+const handleLogin = async () => {
+  if (isSubmitDisabled.value) return;
+
+  isLoading.value = true;
+  errorMsg.value = '';
+
+  try {
+    const response = await apiRequest.post('/auth/login', {
+      username: username.value.trim(),
+      password: password.value
+    });
+    authStore.setLoggedIn(response.user);
+
+    toast.add({
+      severity: 'success',
+      summary: 'Login Successful!',
+      detail: `Welcome back, ${response.user.username}!`,
+      life: 5000
+    });
+
+    // Redirect to dashboard after successful login
+    router.push('/');
+  } catch (err) {
+    errorMsg.value = err.message || 'An error has occurred.';
+  } finally {
+    isLoading.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -137,6 +187,14 @@ const password = ref('');
   }
 }
 
+/* Error Message Styling */
+.error-msg {
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: red;
+  margin-top: 0;
+}
+
 /* Form Styling */
 .input-container {
   display: flex;
@@ -183,6 +241,11 @@ const password = ref('');
   background-color: #003D7C;
   color: white;
   padding: 0.8rem 2.5rem;
+}
+
+.login-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .register-btn {

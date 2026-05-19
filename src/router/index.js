@@ -6,6 +6,7 @@ import LoginView from '../views/LoginView.vue';
 import RegisterView from '../views/RegisterView.vue';
 import ProfileView from '../views/ProfileView.vue';
 import ForgotPasswordView from '../views/ForgotPasswordView.vue';
+import { apiRequest } from '../utils/api';
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,12 +45,32 @@ const router = createRouter({
     ]
 });
 
+let hasCheckedAuth = false;
+
 // Redirect users back to login if they visit a protected route without being authenticated
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore();
 
+    // Check cookie validity before proceding
+    if (!hasCheckedAuth) {
+        try {
+            const response = await apiRequest.get('/auth/me');
+            if (response.authenticated) {
+                authStore.setLoggedIn(response.user);
+            }
+        } catch (err) {
+            console.log('No active cookie session found.');
+        } finally {
+            hasCheckedAuth = true;
+        }
+    }
+
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+        // Entering protected page while logged out
         next('/login');
+    } else if (to.meta.requiresAuth === false && authStore.isAuthenticated) {
+        // Revisiting Login/Register screen while logged in
+        next('/');
     } else {
         next();
     }

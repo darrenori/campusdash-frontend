@@ -1,14 +1,15 @@
 <template>
   <div class="min-h-screen bg-gray-50 font-sans text-gray-900">
-
+    <Toast position="top-right" />
     <router-view />
-
   </div>
 </template>
 
 <script setup>
 import { onMounted } from 'vue';
 import { useThemeStore } from './stores/theme';
+
+import Toast from 'primevue/toast';
 
 const themeStore = useThemeStore();
 
@@ -53,5 +54,24 @@ body {
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* PrimeVue Overrides */
+.p-toast .p-toast-message {
+  background: #ffffff;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+}
+
+.p-toast .p-toast-detail {
+  color: #003D7C !important;
+}
+
+@media screen and (max-width: 480px) {
+  div.p-toast {
+    width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding: 0 16px !important;
+  }
 }
 </style>
