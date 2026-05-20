@@ -15,18 +15,20 @@
                     <p>Enter your email address below, and we'll send you a 6-digit verification code.</p>
                 </div>
 
-                <form class="forgot-password-form" @submit.prevent="handleEmailSubmit()">
+                <form class="forgot-password-form" @submit.prevent="handleEmailSubmit">
+                    <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
                     <div class="input-container">
                         <IconField>
                             <InputIcon class="pi pi-envelope" />
                             <InputText v-model="email" placeholder="Email Address" class="input-field" type="email"
-                                autocomplete="email" />
+                                autocomplete="email" :disabled="isLoading" />
                         </IconField>
                     </div>
 
                     <div class="btn-container">
-                        <button type="submit" class="submit-btn" :disabled="!email.trim()">
-                            Send Verification Code
+                        <button type="submit" class="submit-btn" :disabled="!email.trim() || isLoading">
+                            {{ isLoading ? 'Sending...' : 'Send Verification Code' }}
                         </button>
                         <RouterLink to="/login" class="back-btn">Back to Login</RouterLink>
                     </div>
@@ -40,16 +42,18 @@
                     <p>We sent a 6-digit code to <strong>{{ email }}</strong>. Enter it below to proceed.</p>
                 </div>
 
-                <form class="forgot-password-form" @submit.prevent="handleOtpSubmit()">
+                <form class="forgot-password-form" @submit.prevent="handleOtpSubmit">
+                    <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
                     <div class="input-container otp-wrapper">
-                        <InputOtp v-model="otp" :length="6" integerOnly class="otp-input" />
+                        <InputOtp v-model="otp" :length="6" integerOnly class="otp-input" :disabled="isLoading" />
                     </div>
 
                     <div class="btn-container">
-                        <button type="submit" class="submit-btn" :disabled="otp.length !== 6">
+                        <button type="submit" class="submit-btn" :disabled="otp.length !== 6 || isLoading">
                             Verify Code
                         </button>
-                        <button type="button" class="back-btn" @click="currentStep = 1">
+                        <button type="button" class="back-btn" @click="currentStep = 1" :disabled="isLoading">
                             Back
                         </button>
                     </div>
@@ -63,24 +67,28 @@
                     <p>Choose a new password for your account.</p>
                 </div>
 
-                <form class="forgot-password-form" @submit.prevent="handlePasswordReset()">
+                <form class="forgot-password-form" @submit.prevent="handlePasswordReset">
+                    <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
                     <div class="input-container">
                         <IconField>
                             <InputIcon class="pi pi-lock" />
                             <Password v-model="password" placeholder="New Password" class="input-field"
-                                :feedback="false" fluid toggleMask :inputProps="{ autocomplete: 'new-password' }" />
+                                :feedback="false" fluid toggleMask :inputProps="{ autocomplete: 'new-password' }"
+                                :disabled="isLoading" />
                         </IconField>
 
                         <IconField>
                             <InputIcon class="pi pi-key" />
                             <Password v-model="confirmPassword" placeholder="Confirm New Password" class="input-field"
-                                :feedback="false" fluid toggleMask :inputProps="{ autocomplete: 'new-password' }" />
+                                :feedback="false" fluid toggleMask :inputProps="{ autocomplete: 'new-password' }"
+                                :disabled="isLoading" />
                         </IconField>
                     </div>
 
                     <div class="btn-container">
                         <button type="submit" class="submit-btn" :disabled="isResetDisabled">
-                            Update Password
+                            {{ isLoading ? 'Updating Password...' : 'Update Password' }}
                         </button>
                     </div>
                 </form>
@@ -92,6 +100,9 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { apiRequest } from '../utils/api';
+
+const router = useRouter();
 
 // Import PrimeVue components
 import IconField from 'primevue/iconfield';
@@ -99,8 +110,9 @@ import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import InputOtp from 'primevue/inputotp';
 import Password from 'primevue/password';
+import { useToast } from 'primevue/usetoast';
 
-const router = useRouter();
+const toast = useToast();
 
 // Step Tracker (1: Email, 2: OTP, 3: New Password)
 const currentStep = ref(1);
@@ -111,23 +123,99 @@ const otp = ref('');
 const password = ref('');
 const confirmPassword = ref('');
 
+// UI State
+const isLoading = ref(false);
+const errorMsg = ref('');
+
 // Check that the password and confirm password fields match and are not empty before allowing form submission
 const isResetDisabled = computed(() => {
     if (!password.value || !confirmPassword.value) return true;
-    return password.value !== confirmPassword.value;
+    return password.value !== confirmPassword.value || isLoading.value;
 });
 
 // Navigation Handlers for each step of the password reset process
-const handleEmailSubmit = () => {
-    currentStep.value = 2;
+// 1. Request OTP using email address
+const handleEmailSubmit = async () => {
+    if (!email.value.trim() || isLoading.value) return;
+
+    isLoading.value = true;
+    errorMsg.value = '';
+
+    try {
+        const response = await apiRequest.post('/auth/forgot-password', {
+            email: email.value.trim()
+        });
+
+        toast.add({
+            severity: 'success',
+            summary: 'OTP Sent',
+            detail: response.message,
+            life: 5000
+        });
+
+        currentStep.value = 2;
+    } catch (err) {
+        errorMsg.value = err.message || 'Failed to request OTP.';
+    } finally {
+        isLoading.value = false;
+    }
 };
 
-const handleOtpSubmit = () => {
-    currentStep.value = 3;
+// 2. Validate OTP
+const handleOtpSubmit = async () => {
+    if (otp.value.length !== 6 || isLoading.value) return;
+
+    isLoading.value = true;
+    errorMsg.value = '';
+
+    try {
+        await apiRequest.post('/auth/verify-otp', {
+            email: email.value.trim(),
+            otp: otp.value
+        });
+
+        toast.add({
+            severity: 'success',
+            summary: 'OTP Verified',
+            detail: 'Proceed to create new password.',
+            life: 5000
+        });
+
+        currentStep.value = 3;
+    } catch (err) {
+        errorMsg.value = err.message || 'Invalid or expired OTP.';
+    } finally {
+        isLoading.value = false;
+    }
 };
 
-const handlePasswordReset = () => {
-    router.push('/login');
+// 3. Submit new password
+const handlePasswordReset = async () => {
+    if (isResetDisabled.value) return;
+
+    isLoading.value = true;
+    errorMsg.value = '';
+
+    try {
+        const response = await apiRequest.post('/auth/reset-password', {
+            email: email.value.trim(),
+            otp: otp.value,
+            newPassword: password.value
+        });
+
+        toast.add({
+            severity: 'success',
+            summary: 'Password Updated',
+            detail: response.message || 'Password has been reset successfully. Please proceed to login.',
+            life: 5000
+        });
+
+        router.push('/login');
+    } catch (err) {
+        errorMsg.value = err.message || 'Failed to update password.';
+    } finally {
+        isLoading.value = false;
+    }
 };
 </script>
 
@@ -239,6 +327,14 @@ const handlePasswordReset = () => {
     to {
         transform: translateY(10vh);
     }
+}
+
+/* Error Message Styling */
+.error-msg {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: red;
+    margin-top: 0;
 }
 
 /* Form Styling */
