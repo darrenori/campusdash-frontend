@@ -14,7 +14,7 @@
 
 - Ensure that Node.js is installed (v24.15.0 recommended)
 - Create a .env file in the root directory:
-- 
+
 ```
 VITE_BACKEND_URL=http://localhost:8080/api
 ```
