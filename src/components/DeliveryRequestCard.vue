@@ -9,7 +9,12 @@
                 </div>
                 <div class="who-meta">
                     <span class="username">@{{ request.requester.name }}</span>
-                    <span class="items">{{ itemCount }} {{ itemCount === 1 ? 'item' : 'items' }}</span>
+                    <span class="items">
+                        {{ itemCount }} {{ itemCount === 1 ? 'item' : 'items' }}
+                        <span class="presence" :class="{ online: requesterOnline }">
+                            {{ requesterOnline ? 'Online' : 'Offline' }}
+                        </span>
+                    </span>
                 </div>
             </div>
             <span class="stall-tag" :style="stallStyle">{{ request.stall }}</span>
@@ -57,6 +62,10 @@ const props = defineProps({
     accepting: {
         type: Boolean,
         default: false
+    },
+    requesterOnline: {
+        type: Boolean,
+        default: false
     }
 });
 
@@ -86,7 +95,7 @@ const stallStyle = computed(() => {
 <style scoped>
 .request-card {
     background: #ffffff;
-    border-radius: 20px;
+    border-radius: 28px;
     padding: 16px 18px;
     margin: 0 auto 14px;
     max-width: 640px;
@@ -156,15 +165,42 @@ const stallStyle = computed(() => {
 }
 
 .items {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 0.72rem;
     color: #9a9aa0;
+}
+
+.presence {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #b0b0b6;
+    font-weight: 700;
+}
+
+.presence::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #b0b0b6;
+}
+
+.presence.online {
+    color: #0e9f6e;
+}
+
+.presence.online::before {
+    background: #0e9f6e;
 }
 
 .stall-tag {
     font-size: 0.6rem;
     font-weight: 800;
     padding: 6px 11px;
-    border-radius: 8px;
+    border-radius: 14px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -264,7 +300,7 @@ const stallStyle = computed(() => {
     background: #003D7C;
     color: #ffffff;
     border: none;
-    border-radius: 12px;
+    border-radius: 18px;
     padding: 11px;
     font-size: 0.78rem;
     font-weight: 700;

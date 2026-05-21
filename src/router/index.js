@@ -41,6 +41,14 @@ const router = createRouter({
             name: 'request',
             component: () => import('../views/RequestView.vue'),
             meta: { requiresAuth: true }
+        },
+        {
+            path: '/history',
+            redirect: '/'
+        },
+        {
+            path: '/:pathMatch(.*)*',
+            redirect: '/'
         }
     ]
 });

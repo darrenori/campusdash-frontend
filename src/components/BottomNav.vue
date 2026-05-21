@@ -13,14 +13,14 @@
     <div class="nav-item">
       <div class="points-badge">
         <span class="star"><i class="pi pi-star-fill"></i></span>
-        <span class="amount">10 PTS</span>
+        <span class="amount">{{ authStore.user?.points ?? '—' }} PTS</span>
       </div>
     </div>
 
-    <router-link to="/messages" class="nav-item">
+    <div class="nav-item nav-disabled">
       <span class="icon"><i class="pi pi-comments"></i></span>
       <span class="label">Messages</span>
-    </router-link>
+    </div>
 
     <router-link to="/profile" class="nav-item">
       <span class="icon"><i class="pi pi-user"></i></span>
@@ -28,6 +28,11 @@
     </router-link>
   </nav>
 </template>
+
+<script setup>
+import { useAuthStore } from '../stores/auth';
+const authStore = useAuthStore();
+</script>
 
 <style scoped>
 .bottom-nav {
@@ -53,6 +58,11 @@
   cursor: pointer;
   flex: 1;
   transition: color 0.2s ease;
+}
+
+.nav-disabled {
+  cursor: default;
+  opacity: 0.9;
 }
 
 /* Currently selected tab */

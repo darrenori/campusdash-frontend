@@ -34,6 +34,7 @@
                 v-for="request in filteredRequests"
                 :key="request.id"
                 :request="request"
+                :requester-online="onlineUserIds.has(Number(request.requester.id))"
                 :accepting="acceptingId === request.id"
                 @accept="acceptRequest"
             />
@@ -57,6 +58,7 @@ const requests = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const acceptingId = ref(null);
+const onlineUserIds = ref(new Set());
 
 const tabs = computed(() => {
     const count = requests.value.length || null;
@@ -110,15 +112,49 @@ function onAccepted({ id }) {
     requests.value = requests.value.filter((r) => r.id !== id);
 }
 
+function onCancelled({ id }) {
+    requests.value = requests.value.filter((r) => r.id !== id);
+}
+
+function onCompleted({ id }) {
+    requests.value = requests.value.filter((r) => r.id !== id);
+}
+
+function onPresenceSnapshot({ onlineUserIds: ids = [] }) {
+    onlineUserIds.value = new Set(ids.map(Number));
+}
+
+function onPresenceUpdate({ userId, online }) {
+    const next = new Set(onlineUserIds.value);
+    const id = Number(userId);
+    if (online) {
+        next.add(id);
+    } else {
+        next.delete(id);
+    }
+    onlineUserIds.value = next;
+}
+
 onMounted(() => {
     loadRequests();
+    socket.on('connect', loadRequests);
     socket.on('request:created', onCreated);
     socket.on('request:accepted', onAccepted);
+    socket.on('request:cancelled', onCancelled);
+    socket.on('request:completed', onCompleted);
+    socket.on('presence:snapshot', onPresenceSnapshot);
+    socket.on('presence:update', onPresenceUpdate);
+    socket.emit('presence:subscribe');
 });
 
 onUnmounted(() => {
+    socket.off('connect', loadRequests);
     socket.off('request:created', onCreated);
     socket.off('request:accepted', onAccepted);
+    socket.off('request:cancelled', onCancelled);
+    socket.off('request:completed', onCompleted);
+    socket.off('presence:snapshot', onPresenceSnapshot);
+    socket.off('presence:update', onPresenceUpdate);
 });
 </script>
 
