@@ -1,109 +1,287 @@
 <template>
     <div class="request-card">
-        <div class="details">
-            <div class="header">
-                <span class="item-name">ORDER ITEM</span>
-                <span class="vendor-tag">VENDOR</span>
-            </div>
 
-            <div class="location-info">
-                <p><strong>From: </strong>SOURCE</p>
-                <p><strong>To: </strong><span class="highlight">DESTINATION</span></p>
+        <div class="card-head">
+            <div class="who">
+                <div class="avatar">
+                    <img v-if="request.requester.pfpUrl" :src="request.requester.pfpUrl" :alt="request.requester.name" class="avatar-img" />
+                    <i v-else class="pi pi-user avatar-icon"></i>
+                </div>
+                <div class="who-meta">
+                    <span class="username">@{{ request.requester.name }}</span>
+                    <span class="items">{{ itemCount }} {{ itemCount === 1 ? 'item' : 'items' }}</span>
+                </div>
             </div>
+            <span class="stall-tag" :style="stallStyle">{{ request.stall }}</span>
         </div>
 
-        <div class="actions">
-            <div class="tokens">
-                <span class="star"><i class="pi pi-star-fill"></i></span> XXX Tokens
+        <div class="divider"></div>
+
+        <div class="card-body">
+            <div class="route">
+                <div class="route-row">
+                    <span class="pin-col"><i class="pi pi-map-marker pin"></i></span>
+                    <span class="loc">{{ request.canteen }}</span>
+                </div>
+                <div class="route-row line-row">
+                    <span class="pin-col"><span class="dotline"></span></span>
+                </div>
+                <div class="route-row">
+                    <span class="pin-col"><i class="pi pi-map-marker pin dest"></i></span>
+                    <span class="loc loc-dest">{{ request.deliveryLocation }}</span>
+                </div>
             </div>
-            <button class="accept-btn">Accept</button>
+
+            <div class="order">
+                <span class="item-text">{{ request.item }}</span>
+                <button
+                    class="accept-btn"
+                    :disabled="accepting"
+                    @click="$emit('accept', request.id)"
+                >
+                    {{ accepting ? 'ACCEPTING…' : 'ACCEPT' }}
+                </button>
+            </div>
         </div>
     </div>
 </template>
 
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+    request: {
+        type: Object,
+        required: true
+    },
+    accepting: {
+        type: Boolean,
+        default: false
+    }
+});
+
+defineEmits(['accept']);
+
+const itemCount = computed(() => {
+    const lines = (props.request.item || '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
+    return lines.length || 1;
+});
+
+const stallColorMap = {
+    'Western': { bg: 'rgba(16, 185, 129, 0.14)', color: '#0e9f6e' },
+    'Mala':    { bg: 'rgba(239, 68, 68, 0.14)',  color: '#e02424' },
+    'Japanese':{ bg: 'rgba(59, 130, 246, 0.13)', color: '#2563eb' },
+};
+
+const stallStyle = computed(() => {
+    const colors = stallColorMap[props.request.stall]
+        ?? { bg: 'rgba(239, 124, 0, 0.14)', color: '#EF7C00' };
+    return { backgroundColor: colors.bg, color: colors.color };
+});
+</script>
+
 <style scoped>
 .request-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 16px 18px;
+    margin: 0 auto 14px;
+    max-width: 640px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04),
+                0 10px 28px rgba(16, 24, 40, 0.07);
+    transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1),
+                box-shadow 0.2s ease;
+}
+
+.request-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05),
+                0 14px 34px rgba(16, 24, 40, 0.1);
+}
+
+/* ── Header ─────────────────────────────────── */
+.card-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
 }
 
-.header {
+.who {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
+    gap: 11px;
+    min-width: 0;
 }
 
-.item-name {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: var(--text-main);
+.avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 61, 124, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
-.vendor-tag {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-    font-size: 0.7rem;
-    font-weight: bold;
-    padding: 2px 8px;
-    border-radius: 4px;
-    text-transform: uppercase;
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-.location-info p {
-    margin: 4px 0;
-    font-size: 0.9rem;
-    color: var(--text-muted);
+.avatar-icon {
+    font-size: 1.2rem;
+    color: #7aa0c4;
 }
 
-.highlight {
-    color: #10b981;
-    font-weight: 600;
-}
-
-.actions {
-    text-align: right;
+.who-meta {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 2px;
+    min-width: 0;
 }
 
-.tokens {
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: #fbbf24;
+.username {
+    font-size: 0.94rem;
+    font-weight: 700;
+    color: #1c1c1e;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
 }
 
-.accept-btn {
-    background: #10b981;
-    color: white;
-    border: none;
-    padding: 8px 16px;
+.items {
+    font-size: 0.72rem;
+    color: #9a9aa0;
+}
+
+.stall-tag {
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 6px 11px;
     border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-@media (max-width: 600px) {
-    .request-card {
-        flex-direction: column;
-        align-items: flex-start;
-    }
+.divider {
+    height: 1px;
+    background: #f1f1f4;
+    margin: 14px 0;
+}
 
-    .actions {
-        width: 100%;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 1px solid var(--border-color);
-    }
+/* ── Body: route + order ────────────────────── */
+.card-body {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.route {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.route-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 22px;
+}
+
+.line-row {
+    min-height: 14px;
+}
+
+.pin-col {
+    width: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.pin {
+    font-size: 0.95rem;
+    color: #b6c0cd;
+}
+
+.pin.dest {
+    color: #003D7C;
+}
+
+.dotline {
+    width: 0;
+    height: 14px;
+    border-left: 2px dotted #d3d3d8;
+}
+
+.loc {
+    font-size: 0.85rem;
+    color: #76767c;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.loc-dest {
+    color: #1c1c1e;
+    font-weight: 700;
+}
+
+.order {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 10px;
+    width: 46%;
+    flex-shrink: 0;
+}
+
+.item-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #003D7C;
+    text-align: right;
+    line-height: 1.32;
+    white-space: pre-line;
+}
+
+/* ── Accept button ──────────────────────────── */
+.accept-btn {
+    width: 100%;
+    background: #003D7C;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 11px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 61, 124, 0.22);
+    transition: transform 0.14s ease, box-shadow 0.14s ease, opacity 0.14s ease;
+}
+
+.accept-btn:active {
+    transform: scale(0.96);
+    box-shadow: 0 2px 6px rgba(0, 61, 124, 0.2);
+}
+
+.accept-btn:disabled {
+    opacity: 0.55;
+    box-shadow: none;
+    cursor: default;
 }
 </style>
