@@ -40,7 +40,7 @@
                         <span>Edit Info</span>
                     </button>
 
-                    <button class="action-btn">
+                    <button class="action-btn" @click="showQrModal = true">
                         <i class="pi pi-qrcode"></i>
                         <span>PayNow</span>
                     </button>
@@ -71,6 +71,7 @@
             </div>
 
             <EditProfile v-else v-model:visible="showEditView" :userData="userProfile" />
+            <EditPayNow v-model:visible="showQrModal" :currentQrUrl="userProfile.qrCodeUrl" />
         </div>
 
         <BottomNav />
@@ -84,6 +85,7 @@ import { useThemeStore } from '../stores/theme';
 import { useAuthStore } from '../stores/auth';
 
 import EditProfile from '../components/EditProfile.vue';
+import EditPayNow from '../components/EditPayNow.vue';
 import BottomNav from '../components/BottomNav.vue';
 
 const themeStore = useThemeStore();
@@ -91,6 +93,7 @@ const authStore = useAuthStore();
 const router = useRouter();
 
 const showEditView = ref(false);
+const showQrModal = ref(false);
 
 const handleLogout = () => {
     authStore.logout();

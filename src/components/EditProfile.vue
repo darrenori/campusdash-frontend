@@ -17,7 +17,8 @@
                 <label>Username<span class="required">*</span></label>
                 <IconField>
                     <InputIcon class="pi pi-user" />
-                    <InputText v-model="form.username" placeholder="Username" class="input-field" required autocomplete="username" />
+                    <InputText v-model="form.username" placeholder="Username" class="input-field" required
+                        autocomplete="username" />
                 </IconField>
             </div>
 
@@ -25,7 +26,8 @@
                 <label>Email<span class="required">*</span></label>
                 <IconField>
                     <InputIcon class="pi pi-envelope" />
-                    <InputText v-model="form.email" type="email" placeholder="Email" class="input-field" required autocomplete="email" />
+                    <InputText v-model="form.email" type="email" placeholder="Email" class="input-field" required
+                        autocomplete="email" />
                 </IconField>
             </div>
 
@@ -33,8 +35,8 @@
                 <label>Current Password<span class="required">*</span></label>
                 <IconField>
                     <InputIcon class="pi pi-lock" />
-                    <Password v-model="form.currentPassword" placeholder="Current Password" class="input-field" :feedback="false" fluid
-                        toggleMask :inputProps="{ required: true }" />
+                    <Password v-model="form.currentPassword" placeholder="Current Password" class="input-field"
+                        :feedback="false" fluid toggleMask :inputProps="{ required: true }" />
                 </IconField>
                 <span class="required-text"><span class="required">*</span> Required</span>
             </div>
@@ -43,8 +45,8 @@
                 <label>New Password</label>
                 <IconField>
                     <InputIcon class="pi pi-lock-open" />
-                    <Password v-model="form.newPassword" placeholder="New Password" class="input-field" :feedback="false" fluid
-                        toggleMask />
+                    <Password v-model="form.newPassword" placeholder="New Password" class="input-field"
+                        :feedback="false" fluid toggleMask />
                 </IconField>
             </div>
 
@@ -52,8 +54,8 @@
                 <label>Confirm Password</label>
                 <IconField>
                     <InputIcon class="pi pi-key" />
-                    <Password v-model="form.confirmPassword" placeholder="Confirm Password" class="input-field" :feedback="false" fluid
-                        toggleMask />
+                    <Password v-model="form.confirmPassword" placeholder="Confirm Password" class="input-field"
+                        :feedback="false" fluid toggleMask />
                 </IconField>
             </div>
 
@@ -77,6 +79,7 @@
             </div>
 
             <p class="filename-text">{{ selectedFileName || 'No new file selected' }}</p>
+            <p v-if="imgErrorMsg" class="error-msg">{{ imgErrorMsg }}</p>
 
             <input type="file" ref="fileInput" accept="image/png, image/jpeg, image/jpg" class="hidden-input"
                 @change="handleFileSelect" />
@@ -119,6 +122,7 @@ const form = ref({
 
 const isLoading = ref(false);
 const errorMsg = ref('');
+const imgErrorMsg = ref('');
 
 const isSubmitDisabled = computed(() => {
     // Check that the required fields are not empty before allowing form submission
@@ -174,6 +178,8 @@ const handleFileSelect = (event) => {
 };
 
 const handlePfpUpload = async () => {
+    if (!tempPfpPreview.value) return;
+
     pfpPreview.value = tempPfpPreview.value;
     showPfpEditor.value = false;
 };
@@ -331,8 +337,8 @@ const handleUpdateProfile = async () => {
 
 /* Profile Picture Editor */
 .pfp-preview {
-    width: 140px;
-    height: 140px;
+    width: 200px;
+    height: 200px;
     background-color: var(--bg-main);
     border-radius: 16px;
     border: 2px solid var(--border-color);
@@ -351,6 +357,7 @@ const handleUpdateProfile = async () => {
 .placeholder-icon {
     font-size: 3.5rem;
     color: #ccc;
+    opacity: 0.6;
 }
 
 .filename-text {
