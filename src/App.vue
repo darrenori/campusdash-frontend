@@ -26,6 +26,7 @@ onMounted(() => {
   --text-main: rgba(249, 250, 251, 1);
   --text-muted: rgba(156, 163, 175, 1);
   --border-color: rgba(55, 65, 81, 1);
+  --theme-blue: #0065C9;
 }
 
 /* LIGHT MODE */
@@ -35,6 +36,7 @@ onMounted(() => {
   --text-main: rgba(17, 24, 39, 1);
   --text-muted: rgba(107, 114, 128, 1);
   --border-color: rgba(229, 231, 235, 1);
+  --theme-blue: #003D7C;
 }
 
 html,
