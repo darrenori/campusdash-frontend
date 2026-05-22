@@ -55,8 +55,8 @@ router.beforeEach(async (to, from) => {
     if (!hasCheckedAuth) {
         try {
             const response = await apiRequest.get('/auth/me');
-            if (response.authenticated) {
-                authStore.setLoggedIn(response.user);
+            if (!response.authenticated) {
+                authStore.logout();
             }
         } catch (err) {
             console.log('No active cookie session found.');
