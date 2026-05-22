@@ -22,7 +22,7 @@ onMounted(() => {
 :root {
   /* DARK MODE (Default) */
   --bg-main: linear-gradient(135deg, rgba(5, 5, 5, 1) 0%, rgba(45, 45, 45, 1) 100%);
-  --bg-surface: rgba(30, 30, 30, 0.8);
+  --bg-surface: rgba(30, 30, 30, 0.95);
   --text-main: rgba(249, 250, 251, 1);
   --text-muted: rgba(156, 163, 175, 1);
   --border-color: rgba(55, 65, 81, 1);
@@ -32,7 +32,7 @@ onMounted(() => {
 /* LIGHT MODE */
 [data-theme="light"] {
   --bg-main: rgba(243, 244, 246, 1);
-  --bg-surface: rgba(255, 255, 255, 1);
+  --bg-surface: rgba(255, 255, 255, 0.95);
   --text-main: rgba(17, 24, 39, 1);
   --text-muted: rgba(107, 114, 128, 1);
   --border-color: rgba(229, 231, 235, 1);
@@ -75,5 +75,21 @@ body {
     right: 0 !important;
     padding: 0 16px !important;
   }
+}
+
+.p-dialog {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+.p-dialog-title,
+.p-dialog-header-close-icon {
+  color: var(--text-main) !important;
+}
+
+.p-dialog-header,
+.p-dialog-content {
+  background: transparent !important;
 }
 </style>

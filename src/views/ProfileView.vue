@@ -1,72 +1,76 @@
 <template>
     <div class="profile-screen">
         <div class="header-banner">
-            <img src="../assets/top-waves-2.svg" class="top-waves" />
-
             <button class="logout-btn" @click="handleLogout">
                 <i class="pi pi-sign-out"></i>
             </button>
-
-            <!-- Profile picture, username, and metadata -->
-            <div class="profile-card">
-                <div class="avatar-wrapper">
-                    <img v-if="userProfile.pfpUrl" :src="userProfile.pfpUrl" class="avatar-img" />
-                    <i v-else class="pi pi-user default-avatar"></i>
-                </div>
-
-                <h2 class="username-title">
-                    {{ userProfile.username }}
-                </h2>
-                <div class="metadata-rows">
-                    <p class="meta-item">Member since: {{ userProfile.memberSince }}</p>
-                    <p class="meta-item">Deliveries Completed: {{ userProfile.deliveriesCount }}</p>
-                </div>
-
-                <div class="badges-indicator">
-                    Badges: {{ userProfile.numBadges }}
-                </div>
-            </div>
         </div>
 
-        <!-- Controls -->
-        <div class="action-buttons-row">
-            <button @click="themeStore.toggleTheme()" class="action-btn">
-                <i :class="themeStore.isDark ? 'pi pi-sun' : 'pi pi-moon'"></i>
-                <span>{{ themeStore.isDark ? 'Light Mode' : 'Dark Mode' }}</span>
-            </button>
+        <div class="main-content-wrapper">
+            <div v-if="!showEditView">
+                <!-- Profile picture, username, and metadata -->
+                <div class="profile-card">
+                    <div class="pfp-wrapper">
+                        <img v-if="userProfile.pfpUrl" :src="userProfile.pfpUrl" class="pfp-img" />
+                        <i v-else class="pi pi-user default-pfp"></i>
+                    </div>
 
-            <button class="action-btn">
-                <i class="pi pi-user-edit"></i>
-                <span>Edit Info</span>
-            </button>
+                    <h2 class="username-title">
+                        {{ userProfile.username }}
+                    </h2>
+                    <div class="metadata-rows">
+                        <p class="meta-item">Member since: {{ userProfile.memberSince }}</p>
+                        <p class="meta-item">Deliveries Completed: {{ userProfile.deliveriesCount }}</p>
+                    </div>
 
-            <button class="action-btn">
-                <i class="pi pi-qrcode"></i>
-                <span>PayNow</span>
-            </button>
-        </div>
-
-        <!-- PayNow QR Code Preview -->
-        <div class="qr-preview-section">
-            <div class="qr-container-box">
-                <div v-if="userProfile.qrCodeUrl" class="qr-graphic-frame">
-                    <img :src="userProfile.qrCodeUrl" class="qr-img" />
+                    <div class="badges-indicator">
+                        Badges: {{ userProfile.numBadges }}
+                    </div>
                 </div>
-                <div v-else class="qr-fallback">
-                    <i class="pi pi-images qr-fallback-icon"></i>
-                    <p>No PayNow QR Uploaded</p>
+
+                <!-- Controls -->
+                <div class="action-buttons-row">
+                    <button @click="themeStore.toggleTheme()" class="action-btn">
+                        <i :class="themeStore.isDark ? 'pi pi-sun' : 'pi pi-moon'"></i>
+                        <span>{{ themeStore.isDark ? 'Light Mode' : 'Dark Mode' }}</span>
+                    </button>
+
+                    <button class="action-btn" @click="showEditView = true">
+                        <i class="pi pi-user-edit"></i>
+                        <span>Edit Info</span>
+                    </button>
+
+                    <button class="action-btn">
+                        <i class="pi pi-qrcode"></i>
+                        <span>PayNow</span>
+                    </button>
+                </div>
+
+                <!-- PayNow QR Code Preview -->
+                <div class="qr-preview-section">
+                    <div class="qr-container-box">
+                        <div v-if="userProfile.qrCodeUrl" class="qr-graphic-frame">
+                            <img :src="userProfile.qrCodeUrl" class="qr-img" />
+                        </div>
+                        <div v-else class="qr-fallback">
+                            <i class="pi pi-images qr-fallback-icon"></i>
+                            <p>No PayNow QR Uploaded</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Badges -->
+                <div class="badges-container">
+                    <h3 class="badges-title">BADGES</h3>
+                    <div class="badges-grid-layout">
+                        <div v-for="n in 4" :key="n" class="badge-slot">
+                            <i class="pi pi-plus plus-icon"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Badges -->
-        <div class="badges-container">
-            <h3 class="badges-title">BADGES</h3>
-            <div class="badges-grid-layout">
-                <div v-for="n in 4" :key="n" class="badge-slot">
-                    <i class="pi pi-plus plus-icon"></i>
-                </div>
-            </div>
+            <EditProfile v-else v-model:visible="showEditView" :userData="userProfile" />
         </div>
 
         <BottomNav />
@@ -79,11 +83,14 @@ import { useRouter } from 'vue-router';
 import { useThemeStore } from '../stores/theme';
 import { useAuthStore } from '../stores/auth';
 
+import EditProfile from '../components/EditProfile.vue';
 import BottomNav from '../components/BottomNav.vue';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 const router = useRouter();
+
+const showEditView = ref(false);
 
 const handleLogout = () => {
     authStore.logout();
@@ -95,6 +102,7 @@ const userProfile = computed(() => {
 
     return {
         username: userData?.username || 'Guest',
+        email: userData?.email || '',
         memberSince: userData?.created_at
             ? new Date(userData.created_at).toLocaleDateString('en-GB')
             : '01-01-1970',
@@ -117,22 +125,12 @@ const userProfile = computed(() => {
 }
 
 .header-banner {
-    position: relative;
-    width: 100%;
-    padding: 40px 20px 10px 20px;
-    display: flex;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.top-waves {
     position: absolute;
-    top: 0;
     width: 100%;
-    min-width: 600px;
-    height: 80%;
-    object-fit: fill;
-    pointer-events: none;
+    height: 180px;
+    z-index: 1;
+    background-image: url('../assets/top-waves-2.svg');
+    background-size: 100% 100%;
 }
 
 .logout-btn {
@@ -155,6 +153,12 @@ const userProfile = computed(() => {
     font-size: 1.4rem;
 }
 
+.main-content-wrapper {
+    position: relative;
+    z-index: 2;
+    margin-top: 50px;
+}
+
 /* Profile and metadata */
 .profile-card {
     position: relative;
@@ -163,9 +167,10 @@ const userProfile = computed(() => {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    width: 100%;
 }
 
-.avatar-wrapper {
+.pfp-wrapper {
     width: 96px;
     height: 96px;
     border-radius: 50%;
@@ -178,13 +183,13 @@ const userProfile = computed(() => {
     transition: border-color 0.3s ease;
 }
 
-.avatar-img {
+.pfp-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.default-avatar {
+.default-pfp {
     font-size: 2.5rem;
     color: var(--theme-blue);
 }
