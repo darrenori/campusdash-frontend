@@ -54,7 +54,7 @@
             </div>
 
             <svg class="header-wave" viewBox="0 0 500 70" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M0,26 C150,2 330,60 500,34 L500,70 L0,70 Z" fill="#ffffff" />
+                <path d="M0,26 C150,2 330,60 500,34 L500,70 L0,70 Z" class="wave-fill" />
             </svg>
         </header>
 
@@ -188,11 +188,13 @@ import { useToast } from 'primevue/usetoast';
 import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
 import { useAuthStore } from '../stores/auth';
+import { useRequestStore } from '../stores/requests';
 import BottomNav from '../components/BottomNav.vue';
 
 const toast = useToast();
 const socket = getSocket();
 const authStore = useAuthStore();
+const requestStore = useRequestStore();
 
 //will change based on their current location
 const fallbackLocations = [
@@ -273,6 +275,7 @@ async function loadActiveRequest() {
     try {
         const { request } = await apiRequest.get('/requests/active');
         activeRequest.value = request;
+        requestStore.setActiveRequest(request);
         joinOrderRoom(request);
         checkRunnerPresence(request);
     } catch (e) {
@@ -357,6 +360,7 @@ async function submit() {
             deliveryInfo: form.value.deliveryInfo,
         });
         activeRequest.value = request;
+        requestStore.setActiveRequest(request);
         joinOrderRoom(request);
         authStore.adjustPoints(-1);
         toast.add({
@@ -378,6 +382,7 @@ async function cancelOrder() {
     try {
         await apiRequest.patch(`/requests/${activeRequest.value.id}/cancel`, {});
         activeRequest.value = null;
+        requestStore.clearActiveRequest();
         runnerOnline.value = false;
         toast.add({
             severity: 'info',
@@ -399,6 +404,7 @@ async function completeOrder() {
     try {
         await apiRequest.patch(`/requests/${activeRequest.value.id}/complete`, {});
         activeRequest.value = null;
+        requestStore.clearActiveRequest();
         runnerOnline.value = false;
         toast.add({
             severity: 'success',
@@ -430,6 +436,7 @@ function onAccepted(payload) {
 function onCancelled({ id }) {
     if (id !== activeRequest.value?.id) return;
     activeRequest.value = null;
+    requestStore.clearActiveRequest();
     runnerOnline.value = false;
     if (!catalog.value.length) loadCatalog();
 }
@@ -437,6 +444,7 @@ function onCancelled({ id }) {
 function onCompleted({ id }) {
     if (id !== activeRequest.value?.id) return;
     activeRequest.value = null;
+    requestStore.clearActiveRequest();
     runnerOnline.value = false;
     if (!catalog.value.length) loadCatalog();
 }
@@ -471,7 +479,7 @@ onUnmounted(() => {
 .request-page {
     height: 100dvh;
     overflow-y: auto;
-    background: #ffffff;
+    background: var(--bg-card);
     display: flex;
     flex-direction: column;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -481,7 +489,7 @@ onUnmounted(() => {
 .req-header {
     position: relative;
     flex-shrink: 0;
-    background: #EF7C00;
+    background: var(--color-accent);
     padding: 28px 24px 56px;
 }
 
@@ -564,7 +572,7 @@ onUnmounted(() => {
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: 28px;
     box-shadow: 0 12px 34px rgba(16, 24, 40, 0.2);
     padding: 14px;
@@ -575,23 +583,23 @@ onUnmounted(() => {
 }
 
 .location-option {
-    background: #f2f2f7;
+    background: var(--bg-input);
     border: none;
     border-radius: 14px;
     padding: 13px 10px;
     font-size: 0.85rem;
     font-weight: 800;
-    color: #1c1c1e;
+    color: var(--text-main);
     cursor: pointer;
     transition: background 0.12s ease;
 }
 
 .location-option:hover {
-    background: #e6e6ec;
+    filter: brightness(0.95);
 }
 
 .location-option.active {
-    background: #EF7C00;
+    background: var(--color-accent);
     color: #ffffff;
 }
 
@@ -605,26 +613,26 @@ onUnmounted(() => {
 .custom-location input {
     flex: 1;
     min-width: 0;
-    background: #f2f2f7;
+    background: var(--bg-input);
     border: 1px solid transparent;
     border-radius: 14px;
     padding: 13px 14px;
     font-size: 0.82rem;
     font-family: inherit;
     font-weight: 600;
-    color: #1c1c1e;
+    color: var(--text-main);
 }
 
 .custom-location input:focus {
     outline: none;
-    border-color: #EF7C00;
-    background: #ffffff;
+    border-color: var(--color-accent);
+    background: var(--bg-card);
 }
 
 .location-error {
     grid-column: 1 / -1;
     margin: -2px 4px 0;
-    color: #ff3b30;
+    color: var(--color-error);
     font-size: 0.74rem;
     font-weight: 600;
 }
@@ -637,11 +645,11 @@ onUnmounted(() => {
 
 .location-result {
     width: 100%;
-    background: #ffffff;
+    background: var(--bg-card);
     border: 1px solid rgba(0, 61, 124, 0.12);
     border-radius: 12px;
     padding: 10px 12px;
-    color: #003D7C;
+    color: var(--color-primary);
     font-family: inherit;
     font-size: 0.84rem;
     font-weight: 800;
@@ -685,28 +693,28 @@ onUnmounted(() => {
 .field label {
     font-size: 1.05rem;
     font-weight: 900;
-    color: #1c1c1e;
+    color: var(--text-main);
     letter-spacing: 0;
 }
 
 .label-optional {
     font-size: 0.78rem;
     font-weight: 600;
-    color: #8e8e93;
+    color: var(--text-muted);
 }
 
 .field input,
 .field textarea,
 .field select {
     width: 100%;
-    background: #f2f2f7;
+    background: var(--bg-input);
     border: 1px solid transparent;
     border-radius: 14px;
     padding: 14px 16px;
     font-size: 1rem;
     font-family: inherit;
     font-weight: 600;
-    color: #1c1c1e;
+    color: var(--text-main);
     -webkit-user-select: text;
     user-select: text;
     transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
@@ -714,15 +722,15 @@ onUnmounted(() => {
 
 .field input::placeholder,
 .field textarea::placeholder {
-    color: #b0b0b6;
+    color: var(--text-muted);
 }
 
 .field input:focus,
 .field textarea:focus,
 .field select:focus {
     outline: none;
-    background: #ffffff;
-    border-color: #EF7C00;
+    background: var(--bg-card);
+    border-color: var(--color-accent);
     box-shadow: 0 0 0 4px rgba(239, 124, 0, 0.13);
 }
 
@@ -752,13 +760,13 @@ onUnmounted(() => {
     top: 50%;
     transform: translateY(-50%);
     font-size: 0.8rem;
-    color: #8e8e93;
+    color: var(--text-muted);
     pointer-events: none;
 }
 
 .form-error {
     margin: 0;
-    color: #ff3b30;
+    color: var(--color-error);
     font-size: 0.85rem;
 }
 
@@ -774,7 +782,7 @@ onUnmounted(() => {
 
 .status-muted {
     margin: 24px 0;
-    color: #8e8e93;
+    color: var(--text-muted);
     font-size: 0.95rem;
 }
 
@@ -819,7 +827,7 @@ onUnmounted(() => {
 
 .step-copy h2 {
     margin: 0 0 3px;
-    color: #111111;
+    color: var(--text-main);
     font-size: 1.12rem;
     line-height: 1.2;
     font-weight: 900;
@@ -828,7 +836,7 @@ onUnmounted(() => {
 
 .step-copy p {
     margin: 0;
-    color: #8e8e93;
+    color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 600;
     line-height: 1.35;
@@ -900,7 +908,7 @@ onUnmounted(() => {
 .complete-btn {
     width: 100%;
     margin-top: 8px;
-    background: #244783;
+    background: var(--color-info);
     padding: 12px 14px;
     font-size: 0.88rem;
     box-shadow: 0 8px 18px rgba(36, 71, 131, 0.18);
@@ -913,7 +921,7 @@ onUnmounted(() => {
 
 .cancel-btn {
     width: 100%;
-    background: #d33a2c;
+    background: var(--color-danger);
     padding: 18px 16px;
     font-size: 0.85rem;
     letter-spacing: 0.02em;
@@ -965,7 +973,7 @@ onUnmounted(() => {
 .submit-btn {
     margin-top: 8px;
     width: 100%;
-    background: #003D7C;
+    background: var(--color-primary);
     color: #ffffff;
     border: none;
     border-radius: 14px;
@@ -987,5 +995,9 @@ onUnmounted(() => {
     opacity: 0.55;
     box-shadow: none;
     cursor: default;
+}
+
+.wave-fill {
+    fill: var(--bg-card);
 }
 </style>

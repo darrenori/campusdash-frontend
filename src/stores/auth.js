@@ -7,7 +7,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     function setLoggedIn(userData) {
         isAuthenticated.value = true;
-        user.value = userData;
+        user.value = { ...userData, points: userData.points ?? 0 };
     }
 
     function logout() {

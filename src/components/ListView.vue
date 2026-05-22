@@ -36,6 +36,7 @@
                 :request="request"
                 :requester-online="onlineUserIds.has(Number(request.requester.id))"
                 :accepting="acceptingId === request.id"
+                :is-own="!!myRequest"
                 @accept="acceptRequest"
             />
             <div class="bottom-spacer"></div>
@@ -50,18 +51,25 @@ import DeliveryRequestCard from './DeliveryRequestCard.vue';
 import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
 import { useAuthStore } from '../stores/auth';
+import { useRequestStore } from '../stores/requests';
 
 const auth = useAuthStore();
+const requestStore = useRequestStore();
 
 const activeTab = ref('nearby');
 const requests = ref([]);
+const myRequest = ref(null);
 const loading = ref(true);
 const error = ref(null);
 const acceptingId = ref(null);
 const onlineUserIds = ref(new Set());
 
+const filteredRequests = computed(() =>
+    myRequest.value ? [myRequest.value] : requests.value
+);
+
 const tabs = computed(() => {
-    const count = requests.value.length || null;
+    const count = filteredRequests.value.length || null;
     return [
         { key: 'nearby',     label: 'Nearby Me',  badge: count },
         { key: 'recent',     label: 'Recent',     badge: count },
@@ -69,14 +77,17 @@ const tabs = computed(() => {
     ];
 });
 
-const filteredRequests = computed(() => requests.value);
-
 async function loadRequests() {
     try {
         loading.value = true;
         error.value = null;
-        const { requests: data } = await apiRequest.get('/requests');
+        const [{ requests: data }, { request: active }] = await Promise.all([
+            apiRequest.get('/requests'),
+            apiRequest.get('/requests/active'),
+        ]);
         requests.value = data;
+        myRequest.value = active;
+        requestStore.setActiveRequest(active);
     } catch (e) {
         error.value = e.message;
     } finally {
@@ -112,12 +123,25 @@ function onAccepted({ id }) {
     requests.value = requests.value.filter((r) => r.id !== id);
 }
 
+function onActiveRequest(request) {
+    myRequest.value = request;
+    requestStore.setActiveRequest(request);
+}
+
 function onCancelled({ id }) {
     requests.value = requests.value.filter((r) => r.id !== id);
+    if (myRequest.value?.id === id) {
+        myRequest.value = null;
+        requestStore.clearActiveRequest();
+    }
 }
 
 function onCompleted({ id }) {
     requests.value = requests.value.filter((r) => r.id !== id);
+    if (myRequest.value?.id === id) {
+        myRequest.value = null;
+        requestStore.clearActiveRequest();
+    }
 }
 
 function onPresenceSnapshot({ onlineUserIds: ids = [] }) {
@@ -140,6 +164,7 @@ onMounted(() => {
     socket.on('connect', loadRequests);
     socket.on('request:created', onCreated);
     socket.on('request:accepted', onAccepted);
+    socket.on('request:active', onActiveRequest);
     socket.on('request:cancelled', onCancelled);
     socket.on('request:completed', onCompleted);
     socket.on('presence:snapshot', onPresenceSnapshot);
@@ -151,6 +176,7 @@ onUnmounted(() => {
     socket.off('connect', loadRequests);
     socket.off('request:created', onCreated);
     socket.off('request:accepted', onAccepted);
+    socket.off('request:active', onActiveRequest);
     socket.off('request:cancelled', onCancelled);
     socket.off('request:completed', onCompleted);
     socket.off('presence:snapshot', onPresenceSnapshot);
@@ -164,7 +190,7 @@ onUnmounted(() => {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    background: #ffffff;
+    background: var(--bg-card);
 }
 
 /* ── Sub-tabs header ─────────────────────────── */
@@ -175,7 +201,7 @@ onUnmounted(() => {
 
 .sub-tabs {
     display: flex;
-    border-bottom: 1px solid #ececec;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .sub-tab {
@@ -188,7 +214,7 @@ onUnmounted(() => {
     padding: 10px 16px;
     margin-bottom: -1px;
     cursor: pointer;
-    color: #8e8e93;
+    color: var(--text-muted);
     font-size: 0.875rem;
     font-weight: 500;
     white-space: nowrap;
@@ -196,13 +222,13 @@ onUnmounted(() => {
 }
 
 .sub-tab.active {
-    color: #1c1c1e;
-    border-bottom-color: #EF7C00;
+    color: var(--text-main);
+    border-bottom-color: var(--color-accent);
     font-weight: 700;
 }
 
 .tab-badge {
-    background: #EF7C00;
+    background: var(--color-accent);
     color: #ffffff;
     font-size: 0.65rem;
     font-weight: 700;
@@ -226,13 +252,13 @@ onUnmounted(() => {
 
 .list-state {
     text-align: center;
-    color: #8e8e93;
+    color: var(--text-muted);
     font-size: 0.875rem;
     padding: 24px 0;
 }
 
 .list-state.error {
-    color: #ef4444;
+    color: var(--color-error);
 }
 
 /* ── Empty state ─────────────────────────────── */
@@ -258,7 +284,7 @@ onUnmounted(() => {
 
 .empty-icon .pi {
     font-size: 2.4rem;
-    color: #EF7C00;
+    color: var(--color-accent);
 }
 
 @keyframes float {
@@ -271,7 +297,7 @@ onUnmounted(() => {
     font-size: 1.15rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    color: #1c1c1e;
+    color: var(--text-main);
 }
 
 .empty-sub {
@@ -279,6 +305,6 @@ onUnmounted(() => {
     max-width: 260px;
     font-size: 0.85rem;
     line-height: 1.45;
-    color: #8e8e93;
+    color: var(--text-muted);
 }
 </style>

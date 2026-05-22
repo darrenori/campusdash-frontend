@@ -263,7 +263,7 @@ const handlePasswordReset = async () => {
 }
 
 .instruction-container h2 {
-    color: #003D7C;
+    color: var(--color-primary);
     font-size: 1.5rem;
     margin-top: 0;
     margin-bottom: 0.5rem;
@@ -381,7 +381,7 @@ const handlePasswordReset = async () => {
 }
 
 .submit-btn {
-    background-color: #003D7C;
+    background-color: var(--color-primary);
     color: white;
     margin-bottom: 1rem;
 }
@@ -392,8 +392,8 @@ const handlePasswordReset = async () => {
 }
 
 .back-btn {
-    background-color: #EF7C00;
+    background-color: var(--color-accent);
     color: white;
-    border: 1px solid #EF7C00;
+    border: 1px solid var(--color-accent);
 }
 </style>

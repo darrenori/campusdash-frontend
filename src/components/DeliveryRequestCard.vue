@@ -40,12 +40,17 @@
             <div class="order">
                 <span class="item-text">{{ request.item }}</span>
                 <button
+                    v-if="!isOwn"
                     class="accept-btn"
                     :disabled="accepting"
                     @click="$emit('accept', request.id)"
                 >
                     {{ accepting ? 'ACCEPTING…' : 'ACCEPT' }}
                 </button>
+                <div v-else class="own-order-status">
+                    <i class="pi pi-clock"></i>
+                    <span>YOUR ORDER</span>
+                </div>
             </div>
         </div>
     </div>
@@ -64,6 +69,10 @@ const props = defineProps({
         default: false
     },
     requesterOnline: {
+        type: Boolean,
+        default: false
+    },
+    isOwn: {
         type: Boolean,
         default: false
     }
@@ -94,7 +103,8 @@ const stallStyle = computed(() => {
 
 <style scoped>
 .request-card {
-    background: #ffffff;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 28px;
     padding: 16px 18px;
     margin: 0 auto 14px;
@@ -159,7 +169,7 @@ const stallStyle = computed(() => {
 .username {
     font-size: 0.94rem;
     font-weight: 700;
-    color: #1c1c1e;
+    color: var(--text-main);
     line-height: 1.2;
     letter-spacing: -0.01em;
 }
@@ -169,7 +179,7 @@ const stallStyle = computed(() => {
     align-items: center;
     gap: 8px;
     font-size: 0.72rem;
-    color: #9a9aa0;
+    color: var(--text-subtle);
 }
 
 .presence {
@@ -209,7 +219,7 @@ const stallStyle = computed(() => {
 
 .divider {
     height: 1px;
-    background: #f1f1f4;
+    background: var(--divider-color);
     margin: 14px 0;
 }
 
@@ -253,7 +263,7 @@ const stallStyle = computed(() => {
 }
 
 .pin.dest {
-    color: #003D7C;
+    color: var(--color-primary);
 }
 
 .dotline {
@@ -264,14 +274,14 @@ const stallStyle = computed(() => {
 
 .loc {
     font-size: 0.85rem;
-    color: #76767c;
+    color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .loc-dest {
-    color: #1c1c1e;
+    color: var(--text-main);
     font-weight: 700;
 }
 
@@ -288,7 +298,7 @@ const stallStyle = computed(() => {
 .item-text {
     font-size: 0.9rem;
     font-weight: 700;
-    color: #003D7C;
+    color: var(--color-primary);
     text-align: right;
     line-height: 1.32;
     white-space: pre-line;
@@ -297,7 +307,7 @@ const stallStyle = computed(() => {
 /* ── Accept button ──────────────────────────── */
 .accept-btn {
     width: 100%;
-    background: #003D7C;
+    background: var(--color-primary);
     color: #ffffff;
     border: none;
     border-radius: 18px;
@@ -319,5 +329,25 @@ const stallStyle = computed(() => {
     opacity: 0.55;
     box-shadow: none;
     cursor: default;
+}
+
+/* ── Own order status ───────────────────────── */
+.own-order-status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 11px 0;
+    color: var(--color-accent);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    width: 100%;
+    text-align: center;
+}
+
+.own-order-status i {
+    font-size: 1rem;
 }
 </style>
