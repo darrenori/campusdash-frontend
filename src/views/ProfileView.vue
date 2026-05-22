@@ -3,6 +3,10 @@
         <div class="header-banner">
             <img src="../assets/top-waves-2.svg" class="top-waves" />
 
+            <button class="logout-btn" @click="handleLogout">
+                <i class="pi pi-sign-out"></i>
+            </button>
+
             <!-- Profile picture, username, and metadata -->
             <div class="profile-card">
                 <div class="avatar-wrapper">
@@ -71,6 +75,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useThemeStore } from '../stores/theme';
 import { useAuthStore } from '../stores/auth';
 
@@ -78,6 +83,12 @@ import BottomNav from '../components/BottomNav.vue';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
+const router = useRouter();
+
+const handleLogout = () => {
+    authStore.logout();
+    router.push('/login');
+};
 
 const userProfile = computed(() => {
     const userData = authStore.user;
@@ -122,6 +133,26 @@ const userProfile = computed(() => {
     height: 80%;
     object-fit: fill;
     pointer-events: none;
+}
+
+.logout-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 5;
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.logout-btn:active {
+    transform: scale(0.9);
+}
+
+.logout-btn i {
+    font-size: 1.4rem;
 }
 
 /* Profile and metadata */
