@@ -55,7 +55,9 @@ router.beforeEach(async (to, from) => {
     if (!hasCheckedAuth) {
         try {
             const response = await apiRequest.get('/auth/me');
-            if (!response.authenticated) {
+            if (response.authenticated) {
+                authStore.setLoggedIn(response.user);
+            } else {
                 authStore.logout();
             }
         } catch (err) {
