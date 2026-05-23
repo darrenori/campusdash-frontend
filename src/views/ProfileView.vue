@@ -285,8 +285,7 @@ const userProfile = computed(() => {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    max-width: 240px;
+    min-width: 240px;
     aspect-ratio: 1;
 }
 

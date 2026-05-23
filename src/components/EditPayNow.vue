@@ -31,7 +31,16 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
+
 import Dialog from 'primevue/dialog';
+import { useToast } from 'primevue/usetoast';
+
+const toast = useToast();
+
+import { apiRequest } from '../utils/api';
+import { useAuthStore } from '../stores/auth';
+
+const authStore = useAuthStore();
 
 const props = defineProps({
     visible: Boolean,
@@ -80,8 +89,29 @@ const handleQrUpload = async () => {
     isLoading.value = true;
     imgErrorMsg.value = '';
 
-    isVisible.value = false;
-    isLoading.value = false;
+    try {
+        const formData = new FormData();
+        formData.append('qr', selectedFile.value);
+
+        const response = await apiRequest.postFormData('/user/upload-qr', formData);
+
+        authStore.setLoggedIn(response.user);
+
+        selectedFile.value = null;
+        selectedFileName.value = '';
+        isVisible.value = false;
+
+        toast.add({
+            severity: 'success',
+            summary: 'PayNow QR Updated!',
+            detail: response.message || 'Your PayNow QR has been updated successfully.',
+            life: 5000
+        });
+    } catch (err) {
+        imgErrorMsg.value = err.response?.data?.error || err.message || 'Failed to upload PayNow QR.';
+    } finally {
+        isLoading.value = false;
+    }
 };
 </script>
 
