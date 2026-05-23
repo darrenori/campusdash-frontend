@@ -17,7 +17,7 @@
             <RequestList v-else />
         </div>
 
-        <button class="request-btn">
+        <button class="request-btn" @click="router.push('/request')">
             <span class="request-icon">+</span>
             <span>Request</span>
         </button>
@@ -29,10 +29,12 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import CampusMap from '../components/MapView.vue';
 import RequestList from '../components/ListView.vue';
 import BottomNav from '../components/BottomNav.vue';
 
+const router = useRouter();
 const viewMode = ref('map');
 </script>
 
@@ -55,12 +57,12 @@ const viewMode = ref('map');
     pointer-events: none;
 }
 
-/* 
-    Map and List View Switch 
+/*
+    Map and List View Switch
     White text on blue background (Inactive state)
 */
 .segmented-control {
-    background-color: #003D7C;
+    background-color: var(--color-primary);
     padding: 4px;
     border-radius: 30px;
     display: flex;
@@ -71,7 +73,7 @@ const viewMode = ref('map');
 .segment-btn {
     background: transparent;
     border: none;
-    color: #FFFFFF;
+    color: #ffffff;
     padding: 8px 24px;
     border-radius: 26px;
     font-weight: 600;
@@ -80,14 +82,14 @@ const viewMode = ref('map');
     transition: all 0.2s ease;
 }
 
-/* 
-    Map and List View Buttons 
+/*
+    Map and List View Buttons
     Blue text on white background (Active state)
 */
 
 .segment-btn.active {
-    background-color: #FFFFFF;
-    color: #003D7C;
+    background-color: #ffffff;
+    color: var(--color-primary);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -100,19 +102,19 @@ const viewMode = ref('map');
     position: fixed;
     bottom: 90px;
     right: 20px;
-    background-color: #EF7C00;
-    box-shadow: 0 4px 12px rgba(100, 53, 2, 0.4);
+    background-color: var(--color-accent);
+    box-shadow: 0 8px 22px rgba(239, 124, 0, 0.45);
     color: white;
     border: none;
     border-radius: 30px;
-    padding: 12px 24px;
+    padding: 13px 24px;
     font-size: 1rem;
-    font-weight: bold;
+    font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .request-btn:active {

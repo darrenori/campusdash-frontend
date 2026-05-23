@@ -221,7 +221,7 @@ const handleLogin = async () => {
 }
 
 .forgot-link {
-  color: #003D7C;
+  color: var(--color-primary);
   text-decoration: none;
 }
 
@@ -238,7 +238,7 @@ const handleLogin = async () => {
 }
 
 .login-btn {
-  background-color: #003D7C;
+  background-color: var(--color-primary);
   color: white;
   padding: 0.8rem 2.5rem;
 }
@@ -249,9 +249,9 @@ const handleLogin = async () => {
 }
 
 .register-btn {
-  background-color: white;
-  color: #003D7C;
-  border: 1px solid #003D7C;
+  background-color: #ffffff;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   width: 100%;
   padding: 1rem;
 }

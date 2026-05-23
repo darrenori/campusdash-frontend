@@ -1,11 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-
-import DashboardView from '../views/DashboardView.vue';
-import LoginView from '../views/LoginView.vue';
-import RegisterView from '../views/RegisterView.vue';
-import ProfileView from '../views/ProfileView.vue';
-import ForgotPasswordView from '../views/ForgotPasswordView.vue';
 import { apiRequest } from '../utils/api';
 
 const router = createRouter({
@@ -15,32 +9,46 @@ const router = createRouter({
         {
             path: '/',
             name: 'dashboard',
-            component: DashboardView,
+            component: () => import('../views/DashboardView.vue'),
             meta: { requiresAuth: true }
         },
         {
             path: '/login',
             name: 'login',
-            component: LoginView,
+            component: () => import('../views/LoginView.vue'),
             meta: { requiresAuth: false }
         },
         {
             path: '/register',
             name: 'register',
-            component: RegisterView,
+            component: () => import('../views/RegisterView.vue'),
             meta: { requiresAuth: false }
         },
         {
             path: '/forgot-password',
             name: 'forgot-password',
-            component: ForgotPasswordView,
+            component: () => import('../views/ForgotPasswordView.vue'),
             meta: { requiresAuth: false }
         },
         {
             path: '/profile',
             name: 'profile',
-            component: ProfileView,
+            component: () => import('../views/ProfileView.vue'),
             meta: { requiresAuth: true }
+        },
+        {
+            path: '/request',
+            name: 'request',
+            component: () => import('../views/RequestView.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/history',
+            redirect: '/'
+        },
+        {
+            path: '/:pathMatch(.*)*',
+            redirect: '/'
         }
     ]
 });
@@ -65,12 +73,14 @@ router.beforeEach(async (to, from) => {
         }
     }
 
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    const isPublic = to.meta.requiresAuth === false;
+
+    if (!isPublic && !authStore.isAuthenticated) {
         // Entering protected page while logged out
         return '/login';
     }
 
-    if (to.meta.requiresAuth === false && authStore.isAuthenticated) {
+    if (isPublic && authStore.isAuthenticated) {
         // Revisiting Login/Register screen while logged in
         return '/';
     }

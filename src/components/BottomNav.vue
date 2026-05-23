@@ -1,9 +1,9 @@
 <template>
   <nav class="bottom-nav">
-    <router-link to="/" class="nav-item">
+    <button class="nav-item" :class="{ 'router-link-active': isDiscoverActive }" @click="goDiscover">
       <span class="icon"><i class="pi pi-compass"></i></span>
       <span class="label">Discover</span>
-    </router-link>
+    </button>
 
     <router-link to="/history" class="nav-item">
       <span class="icon"><i class="pi pi-history"></i></span>
@@ -13,14 +13,14 @@
     <div class="nav-item">
       <div class="points-badge">
         <span class="star"><i class="pi pi-star-fill"></i></span>
-        <span class="amount">10 PTS</span>
+        <span class="amount">{{ authStore.user?.points ?? 0 }} PTS</span>
       </div>
     </div>
 
-    <router-link to="/messages" class="nav-item">
+    <div class="nav-item nav-disabled">
       <span class="icon"><i class="pi pi-comments"></i></span>
       <span class="label">Messages</span>
-    </router-link>
+    </div>
 
     <router-link to="/profile" class="nav-item">
       <span class="icon"><i class="pi pi-user"></i></span>
@@ -29,6 +29,30 @@
   </nav>
 </template>
 
+<script setup>
+import { computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
+import { useRequestStore } from '../stores/requests';
+
+const authStore = useAuthStore();
+const requestStore = useRequestStore();
+const router = useRouter();
+const route = useRoute();
+
+const isDiscoverActive = computed(() =>
+    route.path === '/' || (requestStore.activeRequest && route.path === '/request')
+);
+
+function goDiscover() {
+    if (requestStore.activeRequest) {
+        router.push('/request');
+    } else {
+        router.push('/');
+    }
+}
+</script>
+
 <style scoped>
 .bottom-nav {
   position: fixed;
@@ -36,7 +60,7 @@
   left: 0;
   width: 100%;
   height: 70px;
-  background: #003D7C;
+  background: var(--color-primary);
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -48,16 +72,25 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #FFFFFF;
+  color: #ffffff;
   text-decoration: none;
+  background: transparent;
+  border: none;
   cursor: pointer;
   flex: 1;
+  height: 100%;
   transition: color 0.2s ease;
 }
 
+.nav-disabled {
+  cursor: default;
+  opacity: 0.9;
+}
+
 /* Currently selected tab */
-.router-link-active {
-  color: #EF7C00;
+.router-link-active,
+.nav-item.router-link-active {
+  color: var(--color-accent);
 }
 
 .icon {
@@ -72,8 +105,8 @@
 
 /* Current points */
 .points-badge {
-  background-color: #FFFFFF;
-  color: #EF7C00;
+  background-color: #ffffff;
+  color: var(--color-accent);
   padding: 8px 16px;
   border-radius: 20px;
   font-weight: 700;
