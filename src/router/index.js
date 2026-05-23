@@ -47,6 +47,10 @@ const router = createRouter({
             redirect: '/'
         },
         {
+            path: '/messages',
+            redirect: '/'
+        },
+        {
             path: '/:pathMatch(.*)*',
             redirect: '/'
         }
@@ -65,6 +69,8 @@ router.beforeEach(async (to, from) => {
             const response = await apiRequest.get('/auth/me');
             if (response.authenticated) {
                 authStore.setLoggedIn(response.user);
+            } else {
+                authStore.logout();
             }
         } catch (err) {
             console.log('No active cookie session found.');

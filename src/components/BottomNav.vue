@@ -17,10 +17,10 @@
       </div>
     </div>
 
-    <div class="nav-item nav-disabled">
+    <router-link to="/messages" class="nav-item">
       <span class="icon"><i class="pi pi-comments"></i></span>
       <span class="label">Messages</span>
-    </div>
+    </router-link>
 
     <router-link to="/profile" class="nav-item">
       <span class="icon"><i class="pi pi-user"></i></span>
@@ -80,11 +80,6 @@ function goDiscover() {
   flex: 1;
   height: 100%;
   transition: color 0.2s ease;
-}
-
-.nav-disabled {
-  cursor: default;
-  opacity: 0.9;
 }
 
 /* Currently selected tab */
