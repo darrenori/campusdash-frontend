@@ -24,6 +24,7 @@ export const apiRequest = {
 
         return result;
     },
+
     async post(endpoint, data) {
         const response = await fetch(`${BASE_URL}${endpoint}`, {
             method: 'POST',
@@ -34,6 +35,30 @@ export const apiRequest = {
 
         // Handle expired/invalid sessions
         if (response.status === 401 && endpoint !== '/auth/login') {
+            const authStore = useAuthStore();
+            authStore.logout();
+            router.push('/login');
+            throw new Error('Session expired. Please log in again.');
+        }
+
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || 'API request failed');
+        }
+
+        return result;
+    },
+
+    async put(endpoint, data, config = { autoLogout: true }) {
+        const response = await fetch(`${BASE_URL}${endpoint}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            credentials: 'include'
+        });
+
+        // Only log out if the request explicitly allows autoLogout
+        if (response.status === 401 && config.autoLogout) {
             const authStore = useAuthStore();
             authStore.logout();
             router.push('/login');
