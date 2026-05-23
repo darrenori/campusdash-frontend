@@ -49,6 +49,28 @@ export const apiRequest = {
         return result;
     },
 
+    async postFormData(endpoint, formData) {
+        const response = await fetch(`${BASE_URL}${endpoint}`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
+
+        if (response.status === 401) {
+            const authStore = useAuthStore();
+            authStore.logout();
+            router.push('/login');
+            throw new Error('Session expired. Please log in again.');
+        }
+
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || 'API request failed');
+        }
+
+        return result;
+    },
+
     async put(endpoint, data, config = { autoLogout: true }) {
         const response = await fetch(`${BASE_URL}${endpoint}`, {
             method: 'PUT',

@@ -102,6 +102,12 @@ const handleLogout = () => {
 
 const userProfile = computed(() => {
     const userData = authStore.user;
+    let fileServerUrl = import.meta.env.VITE_FILE_SERVER_URL || '';
+    if (fileServerUrl.endsWith('/')) {
+        fileServerUrl = fileServerUrl.slice(0, -1);
+    }
+    const fullPfpPath = userData?.pfp_url ? `${fileServerUrl}${userData.pfp_url}` : null;
+    const fullQrPath = userData?.paynow_qr_url ? `${fileServerUrl}${userData.paynow_qr_url}` : null;
 
     return {
         username: userData?.username || 'Guest',
@@ -111,8 +117,8 @@ const userProfile = computed(() => {
             : '01-01-1970',
         deliveriesCount: 0,
         numBadges: 0,
-        pfpUrl: userData?.pfp_url || null,
-        qrCodeUrl: userData?.paynow_qr_url || null
+        pfpUrl: fullPfpPath,
+        qrCodeUrl: fullQrPath
     };
 });
 </script>

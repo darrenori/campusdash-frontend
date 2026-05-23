@@ -81,14 +81,15 @@
             <p class="filename-text">{{ selectedFileName || 'No new file selected' }}</p>
             <p v-if="imgErrorMsg" class="error-msg">{{ imgErrorMsg }}</p>
 
-            <input type="file" ref="fileInput" accept="image/png, image/jpeg, image/jpg" class="hidden-input"
+            <input type="file" ref="fileInput" accept="image/jpg, image/jpeg, image/png" class="hidden-input"
                 @change="handleFileSelect" />
 
             <div class="pfp-actions">
                 <button type="button" class="choose-btn" @click="triggerFileInput">
                     <i class="pi pi-plus"></i> Choose
                 </button>
-                <button type="button" class="upload-btn" @click="handlePfpUpload" :disabled="!selectedFile">
+                <button type="button" class="upload-btn" @click="handlePfpUpload"
+                    :disabled="!selectedFile || isLoading">
                     <i class="pi pi-upload"></i> Upload
                 </button>
             </div>
@@ -174,6 +175,8 @@ watch(() => props.userData, (newData) => {
     }
 }, { immediate: true, deep: true });
 
+
+// Profile Picture Editor
 const triggerFileInput = () => fileInput.value.click();
 
 const handleFileSelect = (event) => {
@@ -186,12 +189,37 @@ const handleFileSelect = (event) => {
 };
 
 const handlePfpUpload = async () => {
-    if (!tempPfpPreview.value) return;
+    if (!selectedFile.value) return;
 
-    pfpPreview.value = tempPfpPreview.value;
-    showPfpEditor.value = false;
+    isLoading.value = true;
+    imgErrorMsg.value = '';
+
+    try {
+        const formData = new FormData();
+        formData.append('pfp', selectedFile.value);
+
+        const response = await apiRequest.postFormData('/user/upload-pfp', formData);
+
+        authStore.setLoggedIn(response.user);
+
+        selectedFile.value = null;
+        selectedFileName.value = '';
+        showPfpEditor.value = false;
+
+        toast.add({
+            severity: 'success',
+            summary: 'Profile Picture Updated!',
+            detail: response.message || 'Your profile picture has been updated successfully.',
+            life: 5000
+        });
+    } catch (err) {
+        imgErrorMsg.value = err.response?.data?.error || err.message || 'Failed to upload profile picture.';
+    } finally {
+        isLoading.value = false;
+    }
 };
 
+// Profile Text Update
 const handleUpdateProfile = async () => {
     if (isSubmitDisabled.value) return;
 
