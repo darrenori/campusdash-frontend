@@ -19,5 +19,11 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem('userData');
     }
 
-    return { isAuthenticated, user, setLoggedIn, logout };
+    function adjustPoints(delta) {
+        if (user.value != null) {
+            user.value.points = (user.value.points ?? 0) + delta;
+        }
+    }
+
+    return { isAuthenticated, user, setLoggedIn, logout, adjustPoints };
 });

@@ -20,23 +20,39 @@ onMounted(() => {
 
 <style>
 :root {
+  /* Brand colors — same in all themes */
+  --color-primary: #003D7C;
+  --color-accent: #EF7C00;
+  --color-success: #0e9f6e;
+  --color-error: #ff3b30;
+  --color-danger: #d33a2c;
+  --color-info: #244783;
+
   /* DARK MODE (Default) */
   --bg-main: linear-gradient(135deg, rgba(5, 5, 5, 1) 0%, rgba(45, 45, 45, 1) 100%);
   --bg-surface: rgba(30, 30, 30, 0.95);
+  --bg-card: #1c1c1e;
+  --bg-input: rgba(44, 44, 46, 1);
   --text-main: rgba(249, 250, 251, 1);
   --text-muted: rgba(156, 163, 175, 1);
+  --text-subtle: rgba(120, 120, 130, 1);
   --border-color: rgba(55, 65, 81, 1);
   --theme-blue: #0065C9;
+  --divider-color: rgba(55, 65, 81, 0.5);
 }
 
 /* LIGHT MODE */
 [data-theme="light"] {
-  --bg-main: rgba(243, 244, 246, 1);
-  --bg-surface: rgba(255, 255, 255, 0.95);
+  --bg-main: rgba(243, 244, 246, 0.95);
+  --bg-surface: rgba(255, 255, 255, 1);
+  --bg-card: #ffffff;
+  --bg-input: #f2f2f7;
   --text-main: rgba(17, 24, 39, 1);
   --text-muted: rgba(107, 114, 128, 1);
+  --text-subtle: rgba(154, 154, 160, 1);
   --border-color: rgba(229, 231, 235, 1);
   --theme-blue: #003D7C;
+  --divider-color: #f1f1f4;
 }
 
 html,
@@ -65,7 +81,7 @@ body {
 }
 
 .p-toast .p-toast-detail {
-  color: #003D7C !important;
+  color: var(--color-primary) !important;
 }
 
 @media screen and (max-width: 480px) {
