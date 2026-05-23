@@ -27,7 +27,7 @@ export const apiRequest = {
         // Handle expired/invalid sessions
         if (response.status === 401) {
             const authStore = useAuthStore();
-            authStore.logout();
+            await authStore.logout();
             router.push('/login');
             throw new Error('Session expired. Please log in again.');
         }
@@ -49,9 +49,9 @@ export const apiRequest = {
         });
 
         // Handle expired/invalid sessions
-        if (response.status === 401 && endpoint !== '/auth/login') {
+        if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/logout') {
             const authStore = useAuthStore();
-            authStore.logout();
+            await authStore.logout();
             router.push('/login');
             throw new Error('Session expired. Please log in again.');
         }
@@ -63,6 +63,7 @@ export const apiRequest = {
 
         return result;
     },
+    
     async patch(endpoint, data) {
         const response = await fetch(`${BASE_URL}${endpoint}`, {
             method: 'PATCH',
@@ -74,7 +75,7 @@ export const apiRequest = {
         // Handle expired/invalid sessions
         if (response.status === 401) {
             const authStore = useAuthStore();
-            authStore.logout();
+            await authStore.logout();
             router.push('/login');
             throw new Error('Session expired. Please log in again.');
         }
@@ -96,7 +97,7 @@ export const apiRequest = {
 
         if (response.status === 401) {
             const authStore = useAuthStore();
-            authStore.logout();
+            await authStore.logout();
             router.push('/login');
             throw new Error('Session expired. Please log in again.');
         }
@@ -120,7 +121,7 @@ export const apiRequest = {
         // Only log out if the request explicitly allows autoLogout
         if (response.status === 401 && config.autoLogout) {
             const authStore = useAuthStore();
-            authStore.logout();
+            await authStore.logout();
             router.push('/login');
             throw new Error('Session expired. Please log in again.');
         }

@@ -95,8 +95,8 @@ const router = useRouter();
 const showEditView = ref(false);
 const showQrModal = ref(false);
 
-const handleLogout = () => {
-    authStore.logout();
+const handleLogout = async () => {
+    await authStore.logout();
     router.push('/login');
 };
 

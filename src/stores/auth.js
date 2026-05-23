@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { apiRequest } from '../utils/api';
+import router from '../router';
+
 
 export const useAuthStore = defineStore('auth', () => {
     const cachedUser = localStorage.getItem('userData');
@@ -13,10 +16,17 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('userData', JSON.stringify(userData));
     }
 
-    function logout() {
-        isAuthenticated.value = false;
-        user.value = null;
-        localStorage.removeItem('userData');
+    async function logout() {
+        try {
+            await apiRequest.post('/auth/logout');
+        } catch (err) {
+            console.warn('Error occurred while logging out:', err);
+        } finally {
+            isAuthenticated.value = false;
+            user.value = null;
+            localStorage.removeItem('userData');
+            router.push('/login');
+        }
     }
 
     function adjustPoints(delta) {
