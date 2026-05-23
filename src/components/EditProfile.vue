@@ -44,7 +44,7 @@
             <div class="input-group">
                 <label>New Password</label>
                 <IconField>
-                    <InputIcon class="pi pi-lock-open" />
+                    <InputIcon class="pi pi-lock" />
                     <Password v-model="form.newPassword" placeholder="New Password" class="input-field"
                         :feedback="false" fluid toggleMask />
                 </IconField>
