@@ -97,7 +97,6 @@ const showQrModal = ref(false);
 
 const handleLogout = async () => {
     await authStore.logout();
-    router.push('/login');
 };
 
 const userProfile = computed(() => {
