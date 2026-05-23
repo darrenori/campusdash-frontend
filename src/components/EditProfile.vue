@@ -104,6 +104,14 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
+import { useToast } from 'primevue/usetoast';
+
+const toast = useToast();
+
+import { apiRequest } from '../utils/api';
+import { useAuthStore } from '../stores/auth';
+
+const authStore = useAuthStore();
 
 const props = defineProps({
     visible: Boolean,
@@ -185,10 +193,43 @@ const handlePfpUpload = async () => {
 };
 
 const handleUpdateProfile = async () => {
+    if (isSubmitDisabled.value) return;
+
     isLoading.value = true;
     errorMsg.value = '';
-    isVisible.value = false;
-    isLoading.value = false;
+
+    try {
+        const payload = {
+            username: form.value.username.trim(),
+            email: form.value.email.trim(),
+            currentPassword: form.value.currentPassword
+        };
+
+        // The newPassword field should only be included in the payload if it is not empty
+        if (form.value.newPassword && form.value.newPassword.trim() !== '') {
+            payload.newPassword = form.value.newPassword;
+        }
+
+        const response = await apiRequest.put('/user/update-profile', payload, { autoLogout: false });
+
+        // Update Pinia store and LocalStorage with updated user data
+        authStore.setLoggedIn(response.user);
+
+        form.value.currentPassword = '';
+        form.value.newPassword = '';
+        form.value.confirmPassword = '';
+
+        toast.add({
+            severity: 'success',
+            summary: 'Profile Updated!',
+            detail: response.message || 'Your profile has been updated successfully.',
+            life: 5000
+        });
+    } catch (err) {
+        errorMsg.value = err.response?.data?.error || err.message || 'Failed to update profile.';
+    } finally {
+        isLoading.value = false;
+    }
 };
 </script>
 
