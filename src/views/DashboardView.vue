@@ -13,8 +13,10 @@
         </div>
 
         <div class="content-area">
-            <CampusMap v-if="viewMode === 'map'" />
-            <RequestList v-else />
+            <MapView v-if="viewMode === 'map'" :requests="requests" :my-request="myRequest"
+                :online-user-ids="onlineUserIds" />
+            <ListView v-else :requests="requests" :my-request="myRequest" :loading="loading" :error="error"
+                :accepting-id="acceptingId" :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
         </div>
 
         <button class="request-btn" @click="router.push('/request')">
@@ -28,14 +30,137 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import CampusMap from '../components/MapView.vue';
-import RequestList from '../components/ListView.vue';
+
+import MapView from '../components/MapView.vue';
+import ListView from '../components/ListView.vue';
 import BottomNav from '../components/BottomNav.vue';
 
+import { apiRequest } from '../utils/api';
+import { getSocket } from '../utils/socket';
+import { useAuthStore } from '../stores/auth';
+import { useRequestStore } from '../stores/requests';
+
 const router = useRouter();
-const viewMode = ref('map');
+const auth = useAuthStore();
+const requestStore = useRequestStore();
+
+const viewMode = ref('list');
+
+const requests = ref([]);
+const myRequest = ref(null);
+const loading = ref(true);
+const error = ref(null);
+const acceptingId = ref(null);
+const onlineUserIds = ref(new Set());
+
+async function loadRequests() {
+    try {
+        loading.value = true;
+        error.value = null;
+        const [{ requests: data }, { request: active }] = await Promise.all([
+            apiRequest.get('/requests'),
+            apiRequest.get('/requests/active'),
+        ]);
+        requests.value = data;
+        myRequest.value = active;
+        requestStore.setActiveRequest(active);
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        loading.value = false;
+    }
+}
+
+async function acceptRequest(id) {
+    if (acceptingId.value) return;
+    acceptingId.value = id;
+    try {
+        await apiRequest.patch(`/requests/${id}/accept`, {});
+        requests.value = requests.value.filter((r) => r.id !== id);
+    } catch (e) {
+        error.value = e.message;
+        loadRequests();
+    } finally {
+        acceptingId.value = null;
+    }
+}
+
+// Socket.IO Integration
+const socket = getSocket();
+
+function onCreated(request) {
+    const myId = auth.user?.id ?? auth.user?.userId;
+    if (request.requester.id === myId) return;
+    if (!requests.value.some((r) => r.id === request.id)) {
+        requests.value.unshift(request);
+    }
+}
+
+function onAccepted({ id }) {
+    requests.value = requests.value.filter((r) => r.id !== id);
+}
+
+function onActiveRequest(request) {
+    myRequest.value = request;
+    requestStore.setActiveRequest(request);
+}
+
+function onCancelled({ id }) {
+    requests.value = requests.value.filter((r) => r.id !== id);
+    if (myRequest.value?.id === id) {
+        myRequest.value = null;
+        requestStore.clearActiveRequest();
+    }
+}
+
+function onCompleted({ id }) {
+    requests.value = requests.value.filter((r) => r.id !== id);
+    if (myRequest.value?.id === id) {
+        myRequest.value = null;
+        requestStore.clearActiveRequest();
+    }
+}
+
+function onPresenceSnapshot({ onlineUserIds: ids = [] }) {
+    onlineUserIds.value = new Set(ids.map(Number));
+}
+
+function onPresenceUpdate({ userId, online }) {
+    const next = new Set(onlineUserIds.value);
+    const id = Number(userId);
+    if (online) {
+        next.add(id);
+    } else {
+        next.delete(id);
+    }
+    onlineUserIds.value = next;
+}
+
+onMounted(() => {
+    loadRequests();
+    socket.on('connect', loadRequests);
+    socket.on('request:created', onCreated);
+    socket.on('request:accepted', onAccepted);
+    socket.on('request:active', onActiveRequest);
+    socket.on('request:cancelled', onCancelled);
+    socket.on('request:completed', onCompleted);
+    socket.on('presence:snapshot', onPresenceSnapshot);
+    socket.on('presence:update', onPresenceUpdate);
+    socket.emit('presence:subscribe');
+});
+
+onUnmounted(() => {
+    socket.off('connect', loadRequests);
+    socket.off('request:created', onCreated);
+    socket.off('request:accepted', onAccepted);
+    socket.off('request:active', onActiveRequest);
+    socket.off('request:cancelled', onCancelled);
+    socket.off('request:completed', onCompleted);
+    socket.off('presence:snapshot', onPresenceSnapshot);
+    socket.off('presence:update', onPresenceUpdate);
+});
 </script>
 
 <style scoped>

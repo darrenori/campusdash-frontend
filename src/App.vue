@@ -20,7 +20,7 @@ onMounted(() => {
 
 <style>
 :root {
-  /* Brand colors — same in all themes */
+  /* Universal colors (fixed) */
   --color-primary: #003D7C;
   --color-accent: #EF7C00;
   --color-success: #0e9f6e;
@@ -28,7 +28,7 @@ onMounted(() => {
   --color-danger: #d33a2c;
   --color-info: #244783;
 
-  /* DARK MODE (Default) */
+  /* DARK MODE */
   --bg-main: linear-gradient(135deg, rgba(5, 5, 5, 1) 0%, rgba(45, 45, 45, 1) 100%);
   --bg-surface: rgba(30, 30, 30, 0.95);
   --bg-card: #1c1c1e;
@@ -41,7 +41,7 @@ onMounted(() => {
   --divider-color: rgba(55, 65, 81, 0.5);
 }
 
-/* LIGHT MODE */
+/* LIGHT MODE (Default) */
 [data-theme="light"] {
   --bg-main: rgba(243, 244, 246, 0.95);
   --bg-surface: rgba(255, 255, 255, 1);

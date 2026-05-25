@@ -3,9 +3,18 @@
         <div class="map-placeholder-content">
             <h2>Campus Map</h2>
             <p>Render Map Here</p>
+            <small v-if="requests.length">Live active delivery requests: {{ requests.length }}</small>
         </div>
     </div>
 </template>
+
+<script setup>
+defineProps({
+    requests: { type: Array, required: true },
+    myRequest: { type: Object, default: null },
+    onlineUserIds: { type: Object, required: true }
+});
+</script>
 
 <style scoped>
 .map-wrapper {
