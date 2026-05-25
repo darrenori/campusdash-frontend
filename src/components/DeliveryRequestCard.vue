@@ -3,9 +3,9 @@
 
         <div class="card-head">
             <div class="who">
-                <div class="avatar">
-                    <img v-if="request.requester.pfpUrl" :src="request.requester.pfpUrl" :alt="request.requester.name" class="avatar-img" />
-                    <i v-else class="pi pi-user avatar-icon"></i>
+                <div class="pfp">
+                    <img v-if="resolvedPfpUrl" :src="resolvedPfpUrl" :alt="request.requester.name" class="pfp-img" />
+                    <i v-else class="pi pi-user pfp-icon"></i>
                 </div>
                 <div class="who-meta">
                     <span class="username">@{{ request.requester.name }}</span>
@@ -39,12 +39,7 @@
 
             <div class="order">
                 <span class="item-text">{{ request.item }}</span>
-                <button
-                    v-if="!isOwn"
-                    class="accept-btn"
-                    :disabled="accepting"
-                    @click="$emit('accept', request.id)"
-                >
+                <button v-if="!isOwn" class="accept-btn" :disabled="accepting" @click="$emit('accept', request.id)">
                     {{ accepting ? 'ACCEPTING…' : 'ACCEPT' }}
                 </button>
                 <div v-else class="own-order-status">
@@ -80,6 +75,19 @@ const props = defineProps({
 
 defineEmits(['accept']);
 
+const resolvedPfpUrl = computed(() => {
+    const rawUrl = props.request?.requester?.pfpUrl;
+    if (!rawUrl) return null;
+
+    let fileServerUrl = import.meta.env.VITE_FILE_SERVER_URL || '';
+
+    if (fileServerUrl.endsWith('/')) {
+        fileServerUrl = fileServerUrl.slice(0, -1);
+    }
+
+    return `${fileServerUrl}${rawUrl}`;
+});
+
 const itemCount = computed(() => {
     const lines = (props.request.item || '')
         .split('\n')
@@ -90,8 +98,8 @@ const itemCount = computed(() => {
 
 const stallColorMap = {
     'Western': { bg: 'rgba(16, 185, 129, 0.14)', color: '#0e9f6e' },
-    'Mala':    { bg: 'rgba(239, 68, 68, 0.14)',  color: '#e02424' },
-    'Japanese':{ bg: 'rgba(59, 130, 246, 0.13)', color: '#2563eb' },
+    'Mala': { bg: 'rgba(239, 68, 68, 0.14)', color: '#e02424' },
+    'Japanese': { bg: 'rgba(59, 130, 246, 0.13)', color: '#2563eb' },
 };
 
 const stallStyle = computed(() => {
@@ -110,15 +118,15 @@ const stallStyle = computed(() => {
     margin: 0 auto 14px;
     max-width: 640px;
     box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04),
-                0 10px 28px rgba(16, 24, 40, 0.07);
+        0 10px 28px rgba(16, 24, 40, 0.07);
     transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1),
-                box-shadow 0.2s ease;
+        box-shadow 0.2s ease;
 }
 
 .request-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05),
-                0 14px 34px rgba(16, 24, 40, 0.1);
+        0 14px 34px rgba(16, 24, 40, 0.1);
 }
 
 /* ── Header ─────────────────────────────────── */
@@ -136,7 +144,7 @@ const stallStyle = computed(() => {
     min-width: 0;
 }
 
-.avatar {
+.pfp {
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -148,13 +156,13 @@ const stallStyle = computed(() => {
     flex-shrink: 0;
 }
 
-.avatar-img {
+.pfp-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.avatar-icon {
+.pfp-icon {
     font-size: 1.2rem;
     color: #7aa0c4;
 }
