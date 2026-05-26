@@ -18,7 +18,7 @@
                 <IconField>
                     <InputIcon class="pi pi-user" />
                     <InputText v-model="form.username" placeholder="Username" class="input-field" required
-                        autocomplete="username" />
+                        autocomplete="username" maxlength="20" />
                 </IconField>
             </div>
 
@@ -222,6 +222,11 @@ const handlePfpUpload = async () => {
 // Profile Text Update
 const handleUpdateProfile = async () => {
     if (isSubmitDisabled.value) return;
+
+    if (form.value.username.length > 20) {
+        errorMsg.value = 'Username cannot exceed 20 characters.';
+        return;
+    }
 
     isLoading.value = true;
     errorMsg.value = '';

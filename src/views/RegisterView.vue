@@ -15,8 +15,8 @@
                     <!-- IconField PrimeVue Component for placing icons inside input fields -->
                     <IconField>
                         <InputIcon class="pi pi-user" />
-                        <InputText v-model="username" placeholder="Username" class="input-field"
-                            autocomplete="username" />
+                        <InputText v-model="username" placeholder="Username" class="input-field" autocomplete="username"
+                            maxlength="20" />
                     </IconField>
 
                     <IconField>
@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiRequest } from '../utils/api';
 
@@ -83,9 +83,26 @@ const isSubmitDisabled = computed(() => {
     return password.value !== confirmPassword.value;
 });
 
+// Display error if passwords do not match
+watch(
+    () => [password.value, confirmPassword.value],
+    ([newPass, confirmPass]) => {
+        if (confirmPass && newPass !== confirmPass) {
+            errorMsg.value = 'Passwords do not match.';
+        } else {
+            errorMsg.value = '';
+        }
+    }
+);
+
 // Function to submit registration form data to the backend API
 const handleRegister = async () => {
     if (isSubmitDisabled.value) return;
+
+    if (username.value.length > 20) {
+        errorMsg.value = 'Username cannot exceed 20 characters.';
+        return;
+    }
 
     isLoading.value = true;
     errorMsg.value = '';
