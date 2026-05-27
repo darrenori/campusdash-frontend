@@ -71,8 +71,8 @@
                 <div class="timeline-step done">
                     <span class="step-dot"><i class="pi pi-check"></i></span>
                     <div class="step-copy">
-                        <h2>Request Submitted</h2>
-                        <p>{{ activeRequest.requester.name }} requested for {{ activeRequest.item }}</p>
+                        <h2>{{ isDeliverer ? 'Delivery Accepted' : 'Request Submitted' }}</h2>
+                        <p>{{ isDeliverer ? `Pick up ${activeRequest.item} from ${activeRequest.canteen}` : `${activeRequest.requester.name} requested for ${activeRequest.item}` }}</p>
                     </div>
                 </div>
 
@@ -84,9 +84,13 @@
                         <span v-else class="search-pulse"></span>
                     </span>
                     <div class="step-copy">
-                        <h2>{{ hasRunner ? 'Runner Found' : 'Finding Runner...' }}</h2>
+                        <h2>{{ isDeliverer ? 'Deliver the Order' : (hasRunner ? 'Runner Found' : 'Finding Runner...') }}</h2>
                         <p>
-                            <template v-if="hasRunner">
+                            <template v-if="isDeliverer">
+                                {{ activeRequest.deliveryLocation }}
+                                <span v-if="activeRequest.deliveredAt" class="runner-status online">Delivered</span>
+                            </template>
+                            <template v-else-if="hasRunner">
                                 @{{ runnerName }}
                                 <span class="runner-status" :class="{ online: runnerOnline }">
                                     {{ runnerOnline ? 'Online' : 'Offline' }}
@@ -94,8 +98,8 @@
                             </template>
                             <template v-else>Finding you a nearby runner...</template>
                         </p>
-                        <button v-if="hasRunner" type="button" class="complete-btn" :disabled="completing" @click="completeOrder">
-                            {{ completing ? 'COMPLETING...' : 'COMPLETE ORDER' }}
+                        <button v-if="hasRunner" type="button" class="complete-btn" :disabled="completing || (isDeliverer && activeRequest.deliveredAt)" @click="isRequester ? completeOrder() : markDelivered()">
+                            {{ deliveryActionText }}
                         </button>
                     </div>
                 </div>
@@ -103,7 +107,33 @@
 
             <p v-if="error" class="form-error">{{ error }}</p>
 
-            <button v-if="!hasRunner" type="button" class="cancel-btn" :disabled="cancelling" @click="cancelOrder">
+            <div v-if="showCancelReason" class="cancel-panel">
+                <div class="cancel-panel-head">
+                    <h3>Cancel delivery?</h3>
+                    <button type="button" class="cancel-close" :disabled="cancelling" @click="closeCancelReason">
+                        <i class="pi pi-times"></i>
+                    </button>
+                </div>
+                <p>Let the other person know what happened.</p>
+                <p v-if="needsCancelReason" class="cancel-penalty">
+                    Since a runner has been matched, you will lose 1 point if you cancel.
+                </p>
+                <textarea
+                    v-model.trim="cancelReason"
+                    rows="3"
+                    placeholder="e.g. I can no longer make it in time"
+                    maxlength="255"
+                    @input="cancelReason = cleanRequestText(cancelReason)"
+                ></textarea>
+                <div class="cancel-actions">
+                    <button type="button" class="keep-btn" :disabled="cancelling" @click="closeCancelReason">Keep Order</button>
+                    <button type="button" class="cancel-btn compact" :disabled="cancelling" @click="cancelOrder">
+                        {{ cancelling ? 'CANCELLING...' : 'CONFIRM CANCEL' }}
+                    </button>
+                </div>
+            </div>
+
+            <button v-else-if="canCancelOrder" type="button" class="cancel-btn" :disabled="cancelling" @click="openCancelReason">
                 {{ cancelling ? 'CANCELLING...' : 'CANCEL ORDER' }}
             </button>
         </section>
@@ -148,7 +178,7 @@
             </div>
 
             <div class="field">
-                <label for="special">Special Request</label>
+                <label for="special">Special Request <span class="label-optional">(optional)</span></label>
                 <textarea
                     id="special"
                     v-model.trim="form.specialRequest"
@@ -184,6 +214,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
@@ -192,6 +223,7 @@ import { useRequestStore } from '../stores/requests';
 import BottomNav from '../components/BottomNav.vue';
 
 const toast = useToast();
+const router = useRouter();
 const socket = getSocket();
 const authStore = useAuthStore();
 const requestStore = useRequestStore();
@@ -221,6 +253,8 @@ const activeRequest = ref(null);
 const error = ref(null);
 const locationError = ref('');
 const runnerOnline = ref(false);
+const showCancelReason = ref(false);
+const cancelReason = ref('');
 
 const unsupportedTextPattern = /[<>\u0000-\u001F\u007F]|\b(?:https?:\/\/|www\.|javascript:|data:)/i;
 
@@ -250,6 +284,16 @@ const stallOptions = computed(() => {
 const hasActualRunner = computed(() => activeRequest.value?.status === 'accepted' && activeRequest.value?.deliverer);
 const hasRunner = computed(() => hasActualRunner.value);
 const runnerName = computed(() => activeRequest.value?.deliverer?.name || '');
+const currentUserId = computed(() => authStore.user?.id ?? authStore.user?.userId);
+const isRequester = computed(() => Number(activeRequest.value?.requester?.id) === Number(currentUserId.value));
+const isDeliverer = computed(() => Number(activeRequest.value?.deliverer?.id) === Number(currentUserId.value));
+const needsCancelReason = computed(() => activeRequest.value?.status === 'accepted');
+const canCancelOrder = computed(() => ['open', 'accepted'].includes(activeRequest.value?.status));
+const deliveryActionText = computed(() => {
+    if (completing.value) return isRequester.value ? 'COMPLETING...' : 'SAVING...';
+    if (isDeliverer.value) return activeRequest.value?.deliveredAt ? 'DELIVERED' : 'I HAVE DELIVERED';
+    return 'COMPLETE ORDER';
+});
 
 function onCanteenChange() {
     form.value.stallId = '';
@@ -339,6 +383,10 @@ function validateRequestFields() {
         error.value = 'Item is required.';
         return false;
     }
+    if ((authStore.user?.points ?? 0) <= 0) {
+        error.value = 'You need at least 1 point to request an order.';
+        return false;
+    }
     if (unsupportedTextPattern.test(form.value.item) || unsupportedTextPattern.test(form.value.specialRequest) || unsupportedTextPattern.test(form.value.deliveryInfo)) {
         error.value = 'Please remove links or unsupported characters from your request.';
         return false;
@@ -362,7 +410,6 @@ async function submit() {
         activeRequest.value = request;
         requestStore.setActiveRequest(request);
         joinOrderRoom(request);
-        authStore.adjustPoints(-1);
         toast.add({
             severity: 'success',
             summary: 'order submitted!',
@@ -377,17 +424,28 @@ async function submit() {
 
 async function cancelOrder() {
     if (!activeRequest.value || cancelling.value) return;
+    if (needsCancelReason.value && !cancelReason.value.trim()) {
+        error.value = 'Please add a reason before cancelling.';
+        return;
+    }
+    const hadPenalty = needsCancelReason.value;
     cancelling.value = true;
     error.value = null;
     try {
-        await apiRequest.patch(`/requests/${activeRequest.value.id}/cancel`, {});
+        const { points } = await apiRequest.patch(`/requests/${activeRequest.value.id}/cancel`, {
+            reason: hadPenalty ? cancelReason.value : null,
+        });
+        if (hadPenalty) {
+            authStore.setPoints(points);
+        }
         activeRequest.value = null;
         requestStore.clearActiveRequest();
         runnerOnline.value = false;
+        closeCancelReason();
+        router.replace('/');
         toast.add({
             severity: 'info',
             summary: 'Order cancelled',
-            life: 3000,
         });
         if (!catalog.value.length) loadCatalog();
     } catch (e) {
@@ -397,15 +455,31 @@ async function cancelOrder() {
     }
 }
 
+function openCancelReason() {
+    error.value = null;
+    if (needsCancelReason.value) {
+        showCancelReason.value = true;
+    } else {
+        cancelOrder();
+    }
+}
+
+function closeCancelReason() {
+    showCancelReason.value = false;
+    cancelReason.value = '';
+}
+
 async function completeOrder() {
-    if (!activeRequest.value || completing.value) return;
+    if (!activeRequest.value || completing.value || !isRequester.value) return;
     completing.value = true;
     error.value = null;
     try {
-        await apiRequest.patch(`/requests/${activeRequest.value.id}/complete`, {});
+        const { points } = await apiRequest.patch(`/requests/${activeRequest.value.id}/complete`, {});
+        authStore.setPoints(points);
         activeRequest.value = null;
         requestStore.clearActiveRequest();
         runnerOnline.value = false;
+        router.replace('/');
         toast.add({
             severity: 'success',
             summary: 'Order completed',
@@ -419,8 +493,29 @@ async function completeOrder() {
     }
 }
 
+async function markDelivered() {
+    if (!activeRequest.value || completing.value || !isDeliverer.value) return;
+    completing.value = true;
+    error.value = null;
+    try {
+        const { request } = await apiRequest.patch(`/requests/${activeRequest.value.id}/delivered`, {});
+        activeRequest.value = request;
+        requestStore.setActiveRequest(request);
+        toast.add({
+            severity: 'success',
+            summary: 'Marked delivered',
+            life: 3000,
+        });
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        completing.value = false;
+    }
+}
+
 function onActiveRequest(request) {
     activeRequest.value = request;
+    requestStore.setActiveRequest(request);
     joinOrderRoom(request);
     checkRunnerPresence(request);
 }
@@ -429,23 +524,51 @@ function onAccepted(payload) {
     const request = payload?.request;
     if (!request || request.id !== activeRequest.value?.id) return;
     activeRequest.value = request;
+    requestStore.setActiveRequest(request);
     joinOrderRoom(request);
     checkRunnerPresence(request);
 }
 
-function onCancelled({ id }) {
+function onDelivered(payload) {
+    const request = payload?.request;
+    if (!request || request.id !== activeRequest.value?.id) return;
+    activeRequest.value = request;
+    requestStore.setActiveRequest(request);
+    if (isRequester.value && request.status !== 'completed') {
+        toast.add({
+            severity: 'success',
+            summary: 'Your order has been marked as delivered.',
+        });
+    }
+}
+
+function onCancelled({ id, reason, cancelledBy }) {
     if (id !== activeRequest.value?.id) return;
+    if (reason && Number(cancelledBy) !== Number(currentUserId.value)) {
+        toast.add({
+            severity: 'info',
+            summary: 'Order cancelled',
+            detail: reason,
+        });
+    }
     activeRequest.value = null;
     requestStore.clearActiveRequest();
     runnerOnline.value = false;
+    closeCancelReason();
+    router.replace('/');
     if (!catalog.value.length) loadCatalog();
 }
 
 function onCompleted({ id }) {
     if (id !== activeRequest.value?.id) return;
+    if (isDeliverer.value) {
+        authStore.adjustPoints(1);
+    }
     activeRequest.value = null;
     requestStore.clearActiveRequest();
     runnerOnline.value = false;
+    closeCancelReason();
+    router.replace('/');
     if (!catalog.value.length) loadCatalog();
 }
 
@@ -461,6 +584,7 @@ onMounted(() => {
     loadLocations();
     socket.on('request:active', onActiveRequest);
     socket.on('request:accepted', onAccepted);
+    socket.on('request:delivered', onDelivered);
     socket.on('request:cancelled', onCancelled);
     socket.on('request:completed', onCompleted);
     socket.on('presence:update', onPresenceUpdate);
@@ -469,6 +593,7 @@ onMounted(() => {
 onUnmounted(() => {
     socket.off('request:active', onActiveRequest);
     socket.off('request:accepted', onAccepted);
+    socket.off('request:delivered', onDelivered);
     socket.off('request:cancelled', onCancelled);
     socket.off('request:completed', onCompleted);
     socket.off('presence:update', onPresenceUpdate);
@@ -895,6 +1020,90 @@ onUnmounted(() => {
     animation: searchDots 0.9s ease-in-out infinite;
 }
 
+.cancel-panel {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+    box-shadow: 0 8px 22px rgba(16, 24, 40, 0.08);
+}
+
+.cancel-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.cancel-panel h3 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.cancel-panel p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.cancel-penalty {
+    color: var(--color-danger) !important;
+}
+
+.cancel-panel textarea {
+    width: 100%;
+    resize: none;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.cancel-panel textarea:focus {
+    outline: none;
+    border-color: var(--color-danger);
+    box-shadow: 0 0 0 4px rgba(211, 58, 44, 0.12);
+}
+
+.cancel-close {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.cancel-actions {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 10px;
+}
+
+.keep-btn {
+    border: none;
+    border-radius: 14px;
+    padding: 12px 10px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
 .complete-btn,
 .cancel-btn {
     border: none;
@@ -926,6 +1135,11 @@ onUnmounted(() => {
     font-size: 0.85rem;
     letter-spacing: 0.02em;
     box-shadow: 0 8px 18px rgba(211, 58, 44, 0.18);
+}
+
+.cancel-btn.compact {
+    padding: 12px 10px;
+    font-size: 0.78rem;
 }
 
 .cancel-btn:disabled {

@@ -32,8 +32,16 @@ export const useAuthStore = defineStore('auth', () => {
     function adjustPoints(delta) {
         if (user.value != null) {
             user.value.points = (user.value.points ?? 0) + delta;
+            localStorage.setItem('userData', JSON.stringify(user.value));
         }
     }
 
-    return { isAuthenticated, user, setLoggedIn, logout, adjustPoints };
+    function setPoints(points) {
+        if (user.value != null && Number.isFinite(Number(points))) {
+            user.value.points = Number(points);
+            localStorage.setItem('userData', JSON.stringify(user.value));
+        }
+    }
+
+    return { isAuthenticated, user, setLoggedIn, logout, adjustPoints, setPoints };
 });
