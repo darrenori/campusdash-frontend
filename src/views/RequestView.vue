@@ -538,7 +538,6 @@ function onDelivered(payload) {
         toast.add({
             severity: 'success',
             summary: 'Your order has been marked as delivered.',
-            life: 3000,
         });
     }
 }
