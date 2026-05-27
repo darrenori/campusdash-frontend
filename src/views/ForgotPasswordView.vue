@@ -51,7 +51,7 @@
 
                     <div class="btn-container">
                         <button type="submit" class="submit-btn" :disabled="otp.length !== 6 || isLoading">
-                            Verify Code
+                            {{ isLoading ? 'Verifying...' : 'Verify Code' }}
                         </button>
                         <button type="button" class="back-btn" @click="currentStep = 1" :disabled="isLoading">
                             Back
