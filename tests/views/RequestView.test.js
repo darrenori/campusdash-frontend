@@ -25,7 +25,7 @@ jest.mock('primevue/usetoast', () => ({
     useToast: () => ({ add: mockToastAdd }),
 }));
 
-// Each call to getSocket() returns a fresh mock — no cross-test bleed.
+// return fresh mock
 jest.mock('../../src/utils/socket.js', () => ({
     getSocket: () => ({ on: jest.fn(), off: jest.fn(), emit: jest.fn() }),
 }));
@@ -71,7 +71,7 @@ describe('RequestView.vue', () => {
     });
 
     //interceptors
-    describe('form pre-flight interceptors (validateRequestFields)', () => {
+    describe('form pre-flight interceptors', () => {
         it('blocks submit and shows an error when delivery location is not in the allowed list', async () => {
             const wrapper = await mountView();
             wrapper.vm.form.deliveryLocation = 'NOWHERE_CAMPUS';
@@ -101,6 +101,7 @@ describe('RequestView.vue', () => {
             expect(wrapper.find('.form-error').text()).toBe('You need at least 1 point to request an order.');
         });
 
+        //check unsupported characters and links
         it('blocks submit and shows an error when item contains unsupported characters', async () => {
             const wrapper = await mountView();
             wrapper.vm.form.item = 'Kopi <bad>';
@@ -111,6 +112,7 @@ describe('RequestView.vue', () => {
             expect(wrapper.find('.form-error').text()).toBe('Please remove links or unsupported characters from your request.');
         });
 
+        //check urls in desc
         it('blocks submit and shows an error when item contains a URL', async () => {
             const wrapper = await mountView();
             wrapper.vm.form.item = 'https://attacker.example/payload';
@@ -121,6 +123,7 @@ describe('RequestView.vue', () => {
             expect(wrapper.find('.form-error').text()).toBe('Please remove links or unsupported characters from your request.');
         });
 
+        
         it('calls the API when all validation guards pass', async () => {
             apiRequest.post.mockResolvedValueOnce({
                 request: {
