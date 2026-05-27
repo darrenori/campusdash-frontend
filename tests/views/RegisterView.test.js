@@ -58,7 +58,7 @@ describe('RegisterView.vue', () => {
     });
 
     describe('form validation states', () => {
-        it('enables the submit button when all fields are populated with matching passwords', async () => {
+        it('should enable the submit button when all fields are populated with matching passwords', async () => {
             wrapper.vm.username = 'newuser';
             wrapper.vm.email = 'newuser@example.com';
             wrapper.vm.password = 'password123';
@@ -68,11 +68,11 @@ describe('RegisterView.vue', () => {
             expect(wrapper.find('.register-btn').attributes('disabled')).toBeUndefined();
         });
 
-        it('keeps the submit button disabled when fields are empty', () => {
+        it('should keep the submit button disabled when fields are empty', () => {
             expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
         });
 
-        it('disables the submit button if password and confirmPassword are mismatched', async () => {
+        it('should disable the submit button if password and confirmPassword are mismatched', async () => {
             wrapper.vm.username = 'newuser';
             wrapper.vm.email = 'newuser@example.com';
             wrapper.vm.password = 'password123';
@@ -85,7 +85,7 @@ describe('RegisterView.vue', () => {
     });
 
     describe('username length constraints', () => {
-        it('blocks submission and shows an error if username exceeds 20 characters', async () => {
+        it('should block submission and show an error if username exceeds 20 characters', async () => {
             wrapper.vm.username = 'thisisaverylongusername1234567890';
             wrapper.vm.email = 'lengthtest@example.com';
             wrapper.vm.password = 'password123';
@@ -100,7 +100,7 @@ describe('RegisterView.vue', () => {
     });
 
     describe('registration flows', () => {
-        it('triggers loading state, sends POST request, toasts success, and redirects to login', async () => {
+        it('should trigger loading state, send POST request, toast success, and redirect to login', async () => {
             let resolveApi;
             apiRequest.post.mockReturnValueOnce(new Promise((resolve) => { resolveApi = resolve; }));
 
@@ -134,7 +134,7 @@ describe('RegisterView.vue', () => {
             expect(wrapper.vm.isLoading).toBe(false);
         });
 
-        it('sets errorMsg and clears loading state if the request fails', async () => {
+        it('should set errorMsg and clear loading state if the request fails', async () => {
             apiRequest.post.mockRejectedValueOnce(new Error('This email is already registered.'));
 
             wrapper.vm.username = 'newuser';
