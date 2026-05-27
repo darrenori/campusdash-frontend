@@ -1,5 +1,5 @@
 import { setActivePinia, createPinia } from 'pinia';
-import { useRequestStore } from '../requests.js';
+import { useRequestStore } from '../../src/stores/requests.js';
 
 describe('useRequestStore', () => {
   beforeEach(() => {

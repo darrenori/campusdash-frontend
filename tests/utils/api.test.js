@@ -1,14 +1,14 @@
-import { apiRequest } from '../api.js';
+import { apiRequest } from '../../src/utils/api.js';
 
 // Mock dependencies so the API util doesn't trigger real network calls,
 // real auth-store logic, or real router navigation during tests.
-jest.mock('../../stores/auth.js', () => ({
+jest.mock('../../src/stores/auth.js', () => ({
   useAuthStore: jest.fn(() => ({
     logout: jest.fn().mockResolvedValue(undefined),
   })),
 }));
 
-jest.mock('../../router/index.js', () => ({
+jest.mock('../../src/router/index.js', () => ({
   __esModule: true,
   default: { push: jest.fn() },
 }));
@@ -104,7 +104,7 @@ describe('apiRequest', () => {
     });
 
     it('does NOT redirect on 401 for /auth/login', async () => {
-      const { default: router } = require('../../router/index.js');
+      const { default: router } = require('../../src/router/index.js');
       global.fetch.mockResolvedValue({ status: 401, ok: false, text: jest.fn().mockResolvedValue(JSON.stringify({ error: 'Unauthorized' })) });
       await expect(apiRequest.post('/auth/login', {})).rejects.toThrow();
       expect(router.push).not.toHaveBeenCalled();

@@ -6,7 +6,7 @@ module.exports = {
     '^.+\\.js$': 'babel-jest',
   },
   moduleFileExtensions: ['js', 'vue', 'json'],
-  setupFiles: ['<rootDir>/src/tests/setup.js'],
+  setupFiles: ['<rootDir>/tests/setup.js'],
   testPathIgnorePatterns: ['/node_modules/'],
   collectCoverageFrom: [
     'src/**/*.{js,vue}',

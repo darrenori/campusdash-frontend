@@ -1,5 +1,5 @@
 import { setActivePinia, createPinia } from 'pinia';
-import { useThemeStore } from '../theme.js';
+import { useThemeStore } from '../../src/stores/theme.js';
 
 describe('useThemeStore', () => {
   beforeEach(() => {
