@@ -13,6 +13,10 @@ const router = createRouter({
             meta: { requiresAuth: true }
         },
         {
+            path: '/discover',
+            redirect: '/'
+        },
+        {
             path: '/login',
             name: 'login',
             component: () => import('../views/LoginView.vue'),

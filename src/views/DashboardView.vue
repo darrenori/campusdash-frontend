@@ -19,7 +19,7 @@
                 :accepting-id="acceptingId" :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
         </div>
 
-        <button class="request-btn" @click="router.push('/request')">
+        <button v-if="!loading && !myRequest" class="request-btn" @click="router.push('/request')">
             <span class="request-icon">+</span>
             <span>Request</span>
         </button>
@@ -66,6 +66,9 @@ async function loadRequests() {
         requests.value = data;
         myRequest.value = active;
         requestStore.setActiveRequest(active);
+        if (active) {
+            router.replace('/request');
+        }
     } catch (e) {
         error.value = e.message;
     } finally {
@@ -77,8 +80,11 @@ async function acceptRequest(id) {
     if (acceptingId.value) return;
     acceptingId.value = id;
     try {
-        await apiRequest.patch(`/requests/${id}/accept`, {});
+        const { request } = await apiRequest.patch(`/requests/${id}/accept`, {});
         requests.value = requests.value.filter((r) => r.id !== id);
+        myRequest.value = request;
+        requestStore.setActiveRequest(request);
+        router.replace('/request');
     } catch (e) {
         error.value = e.message;
         loadRequests();
@@ -105,6 +111,7 @@ function onAccepted({ id }) {
 function onActiveRequest(request) {
     myRequest.value = request;
     requestStore.setActiveRequest(request);
+    router.replace('/request');
 }
 
 function onCancelled({ id }) {
