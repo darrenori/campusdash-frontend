@@ -446,7 +446,6 @@ async function cancelOrder() {
         toast.add({
             severity: 'info',
             summary: 'Order cancelled',
-            life: 3000,
         });
         if (!catalog.value.length) loadCatalog();
     } catch (e) {
@@ -535,6 +534,13 @@ function onDelivered(payload) {
     if (!request || request.id !== activeRequest.value?.id) return;
     activeRequest.value = request;
     requestStore.setActiveRequest(request);
+    if (isRequester.value && request.status !== 'completed') {
+        toast.add({
+            severity: 'success',
+            summary: 'Your order has been marked as delivered.',
+            life: 3000,
+        });
+    }
 }
 
 function onCancelled({ id, reason, cancelledBy }) {
@@ -544,7 +550,6 @@ function onCancelled({ id, reason, cancelledBy }) {
             severity: 'info',
             summary: 'Order cancelled',
             detail: reason,
-            life: 4500,
         });
     }
     activeRequest.value = null;
