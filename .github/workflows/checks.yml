@@ -1,10 +1,24 @@
-name: Checks
+name: Quality Checks
+run-name: Quality checks for ${{ github.ref_name }}
 
 on:
   push:
+    branches: ['**']
   pull_request:
+    branches: [main, milestone-1]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
   audit:
     runs-on: ubuntu-latest
     steps:

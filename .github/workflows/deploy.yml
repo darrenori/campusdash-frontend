@@ -1,10 +1,9 @@
-name: Deploy
+name: Deploy to GitHub Pages
+run-name: Deploy site from ${{ github.ref_name }}
 
 on:
-  workflow_run:
-    workflows: [Checks]
-    branches: [main]
-    types: [completed]
+  push:
+    branches: [milestone-1]
   workflow_dispatch:
 
 permissions:
@@ -14,21 +13,20 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
+      - uses: actions/configure-pages@v5
 
       - run: npm ci
 
@@ -36,7 +34,7 @@ jobs:
         env:
           GITHUB_PAGES_BASE: /campusdash-frontend/
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
@@ -45,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deploy
+      - id: deployment
         uses: actions/deploy-pages@v4
