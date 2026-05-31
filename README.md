@@ -13,13 +13,11 @@
 ### Prerequisites
 
 - Ensure that Node.js is installed (v24.15.0 recommended)
-- Create a .env file in the root directory:
+- Create a .env file in the root directory
 
-```
-VITE_BACKEND_URL=http://localhost:8080/api
-```
+A sample of the required environment variables can be found in the `sample.env` file.
 
-**Important:** The domain string in the browser address bar must match the backend API target domain string (e.g., both must use `localhost` or both must use your local network IP configuration) to prevent the browser from blocking cross-origin HTTP-only session cookies.
+**Important:** To prevent the browser from blocking cross-origin HttpOnly session cookies during local testing, your frontend and backend domains must match. If you access the frontend via `http://localhost:5173`, your `.env` URLs must also use `localhost`.
 
 ### Installation
 
@@ -101,7 +99,7 @@ The following utilities are available:
   - `getSocket()`: Returns a Socket.io instance.
 
 
-### Testing
+## Testing
 
 The application's testing suite is built using **Jest** and **Vue Test Utils**, focusing on isolated unit testing and component integration. Mocks are heavily utilized for routing (`vue-router`), state management (`pinia`), and network requests (`fetch`) to ensure tests run reliably without side effects.
 
@@ -111,7 +109,7 @@ Tests can be run with the following command:
 npm test
 ```
 
-#### Test Coverage Summary
+### Test Coverage Summary
 
 - **Stores (`src/stores/`)**
   - **Auth Store:** Verifies authentication state transitions, `localStorage` hydration/clearing, session logouts, and integer edge-cases for user point adjustments.
@@ -125,7 +123,7 @@ npm test
   - **DeliveryRequestCard:** Validates UI rendering based on request conditions.
 
 - **Views (`src/views/`)**
-  - **Authentication (Login/Register):** Tests form validation constraints (e.g., password matching, username length limits), loading state UI changes, toast notification triggers, and successful router redirections upon mock API fulfillment.
+  - **Authentication (Login/Register):** Tests form validation constraints (e.g., password matching, username length limits), loading state UI changes, toast notification triggers, and successful router redirections.
   - **Forgot Password:** Validates the 3-step flow (Email -> OTP -> New Password), ensuring the submit buttons remain locked until conditions are met.
   - **Request View:** Tests validation logic and the multi-step UI state (Finding Runner -> Runner Found -> Delivery Accepted).
 
