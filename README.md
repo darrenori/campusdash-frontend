@@ -17,6 +17,8 @@
 
 A sample of the required environment variables can be found in the `sample.env` file.
 
+**Notes:** For the `VITE_GOOGLE_MAPS_MAP_ID` environment variable, you may choose to leave it as `DEMO_MAP_ID`. This environment variable exists only to enable advanced markers as stated on https://developers.google.com/maps/documentation/javascript/map-ids/mapid-over. 
+
 **Important:** To prevent the browser from blocking cross-origin HttpOnly session cookies during local testing, your frontend and backend domains must match. If you access the frontend via `http://localhost:5173`, your `.env` URLs must also use `localhost`.
 
 ### Installation

@@ -1,33 +1,65 @@
 <template>
-    <div class="map-wrapper">
-        <div class="map-placeholder-content">
-            <h2>Campus Map</h2>
-            <p>Render Map Here</p>
-            <small v-if="requests.length">Live active delivery requests: {{ requests.length }}</small>
-        </div>
+    <div class="map-view">
+        <GoogleMap :api-key="apiKey" :map-id="mapId" class="google-map" :center="mapCenter" :zoom="15"
+            :disable-default-ui="true">
+            <AdvancedMarker v-for="request in requests" :key="request.id" :options="{
+                position: request.deliveryCoords,
+                title: request.deliveryLocation
+            }" @click="handleMarkerClick(request)" />
+        </GoogleMap>
     </div>
 </template>
 
 <script setup>
-defineProps({
-    requests: { type: Array, required: true },
-    myRequest: { type: Object, default: null },
-    onlineUserIds: { type: Object, required: true }
+import { computed } from 'vue';
+import { GoogleMap, AdvancedMarker } from 'vue3-google-map';
+
+const props = defineProps({
+    requests: {
+        type: Array,
+        required: true
+    },
+    myRequest: {
+        type: Object,
+        default: null
+    },
+    acceptingId: {
+        type: [Number, String],
+        default: null
+    },
+    onlineUserIds: {
+        type: Object,
+        required: true
+    }
 });
+
+const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
+
+const defaultCenter = {
+    lat: 1.2978101899443413,
+    lng: 103.77668086772162
+};
+
+const mapCenter = computed(() => {
+    return props.requests[0]?.deliveryCoords || defaultCenter;
+});
+
+function handleMarkerClick(request) {
+    console.log('Selected:', request);
+}
 </script>
 
 <style scoped>
-.map-wrapper {
-    height: 100%;
+.map-view {
     width: 100%;
-    background-color: var(--border-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
 }
 
-.map-placeholder-content {
-    text-align: center;
-    color: var(--text-muted);
+.google-map {
+    width: 100%;
+    height: 100%;
 }
 </style>

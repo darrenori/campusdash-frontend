@@ -13,8 +13,8 @@
         </div>
 
         <div class="content-area">
-            <MapView v-if="viewMode === 'map'" :requests="requests" :my-request="myRequest"
-                :online-user-ids="onlineUserIds" />
+            <MapView v-if="viewMode === 'map'" :requests="requests" :my-request="myRequest" :accepting-id="acceptingId"
+                :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
             <ListView v-else :requests="requests" :my-request="myRequest" :loading="loading" :error="error"
                 :accepting-id="acceptingId" :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
         </div>
