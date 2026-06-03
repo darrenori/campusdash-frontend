@@ -129,6 +129,12 @@
                         class="past-card"
                         :class="[order.status, isRequester(order) ? 'is-req' : 'is-run']"
                     >
+                        <div class="pc-icon-strip">
+                            <div class="pc-icon-circle">
+                                <i :class="order.status === 'completed' ? 'pi pi-check' : 'pi pi-times'"></i>
+                            </div>
+                        </div>
+                        <div class="pc-body">
                         <div class="pc-top-row">
                             <span class="pc-stall-tag">
                                 <i class="pi pi-shop"></i>
@@ -165,6 +171,7 @@
                                 <span class="pc-sep">·</span>
                                 <span class="pc-time">{{ formatTime(order.createdAt) }}</span>
                             </span>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -783,21 +790,63 @@ onMounted(loadHistory);
 .past-card {
     background: var(--bg-card);
     border-radius: 20px;
-    padding: 14px 16px;
     margin-bottom: 10px;
     border: 1px solid var(--border-color);
     box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04),
                 0 4px 14px rgba(16, 24, 40, 0.05);
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-direction: row;
     transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
     overflow: hidden;
-    position: relative;
 }
 
-.past-card.completed { border-left: 3px solid var(--color-success); }
-.past-card.cancelled { border-left: 3px solid var(--color-danger); }
+.pc-icon-strip {
+    width: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px 0 0 20px;
+}
+
+.pc-icon-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.past-card.completed .pc-icon-strip {
+    background: rgba(14, 159, 110, 0.08);
+}
+
+.past-card.completed .pc-icon-circle {
+    background: rgba(14, 159, 110, 0.15);
+    color: var(--color-success);
+}
+
+.past-card.cancelled .pc-icon-strip {
+    background: rgba(211, 58, 44, 0.06);
+}
+
+.past-card.cancelled .pc-icon-circle {
+    background: rgba(211, 58, 44, 0.12);
+    color: var(--color-danger);
+}
+
+.pc-body {
+    flex: 1;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
 
 .past-card:active { transform: scale(0.985); }
 .past-card.cancelled { opacity: 0.75; }
