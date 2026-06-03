@@ -48,7 +48,9 @@ const router = createRouter({
         },
         {
             path: '/history',
-            redirect: '/'
+            name: 'history',
+            component: () => import('../views/HistoryView.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/messages',
