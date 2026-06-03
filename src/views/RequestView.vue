@@ -19,33 +19,17 @@
                 </button>
 
                 <div v-if="menuOpen" class="location-menu">
-                    <button
-                        v-for="loc in presetLocations"
-                        :key="loc"
-                        type="button"
-                        class="location-option"
-                        :class="{ active: loc === form.deliveryLocation }"
-                        @click="selectLocation(loc)"
-                    >
+                    <button v-for="loc in presetLocations" :key="loc" type="button" class="location-option"
+                        :class="{ active: loc === form.deliveryLocation }" @click="selectLocation(loc)">
                         {{ loc }}
                     </button>
                     <div class="custom-location">
-                        <input
-                            v-model.trim="customLocation"
-                            placeholder="Search location"
-                            @focus="locationError = ''"
-                            @input="locationError = ''"
-                            @blur="validateLocation"
-                        />
+                        <input v-model.trim="customLocation" placeholder="Search location" @focus="locationError = ''"
+                            @input="locationError = ''" @blur="validateLocation" />
                     </div>
                     <div v-if="customLocation && filteredLocations.length" class="location-results">
-                        <button
-                            v-for="loc in filteredLocations"
-                            :key="loc.id"
-                            type="button"
-                            class="location-result"
-                            @click="selectLocation(loc.name)"
-                        >
+                        <button v-for="loc in filteredLocations" :key="loc.id" type="button" class="location-result"
+                            @click="selectLocation(loc.name)">
                             {{ loc.name }}
                         </button>
                     </div>
@@ -72,7 +56,8 @@
                     <span class="step-dot"><i class="pi pi-check"></i></span>
                     <div class="step-copy">
                         <h2>{{ isDeliverer ? 'Delivery Accepted' : 'Request Submitted' }}</h2>
-                        <p>{{ isDeliverer ? `Pick up ${activeRequest.item} from ${activeRequest.canteen}` : `${activeRequest.requester.name} requested for ${activeRequest.item}` }}</p>
+                        <p>{{ isDeliverer ? `Pick up ${activeRequest.item} from ${activeRequest.canteen}` :
+                            `${activeRequest.requester.name} requested for ${activeRequest.item}` }}</p>
                     </div>
                 </div>
 
@@ -84,7 +69,8 @@
                         <span v-else class="search-pulse"></span>
                     </span>
                     <div class="step-copy">
-                        <h2>{{ isDeliverer ? 'Deliver the Order' : (hasRunner ? 'Runner Found' : 'Finding Runner...') }}</h2>
+                        <h2>{{ isDeliverer ? 'Deliver the Order' : (hasRunner ? 'Runner Found' : 'Finding Runner...') }}
+                        </h2>
                         <p>
                             <template v-if="isDeliverer">
                                 {{ activeRequest.deliveryLocation }}
@@ -98,7 +84,9 @@
                             </template>
                             <template v-else>Finding you a nearby runner...</template>
                         </p>
-                        <button v-if="hasRunner" type="button" class="complete-btn" :disabled="completing || (isDeliverer && activeRequest.deliveredAt)" @click="isRequester ? completeOrder() : markDelivered()">
+                        <button v-if="hasRunner" type="button" class="complete-btn"
+                            :disabled="completing || (isDeliverer && activeRequest.deliveredAt)"
+                            @click="isRequester ? completeOrder() : markDelivered()">
                             {{ deliveryActionText }}
                         </button>
                     </div>
@@ -107,33 +95,13 @@
 
             <p v-if="error" class="form-error">{{ error }}</p>
 
-            <div v-if="showCancelReason" class="cancel-panel">
-                <div class="cancel-panel-head">
-                    <h3>Cancel delivery?</h3>
-                    <button type="button" class="cancel-close" :disabled="cancelling" @click="closeCancelReason">
-                        <i class="pi pi-times"></i>
-                    </button>
-                </div>
-                <p>Let the other person know what happened.</p>
-                <p v-if="needsCancelReason" class="cancel-penalty">
-                    Since a runner has been matched, you will lose 1 point if you cancel.
-                </p>
-                <textarea
-                    v-model.trim="cancelReason"
-                    rows="3"
-                    placeholder="e.g. I can no longer make it in time"
-                    maxlength="255"
-                    @input="cancelReason = cleanRequestText(cancelReason)"
-                ></textarea>
-                <div class="cancel-actions">
-                    <button type="button" class="keep-btn" :disabled="cancelling" @click="closeCancelReason">Keep Order</button>
-                    <button type="button" class="cancel-btn compact" :disabled="cancelling" @click="cancelOrder">
-                        {{ cancelling ? 'CANCELLING...' : 'CONFIRM CANCEL' }}
-                    </button>
-                </div>
+            <div v-if="showCancelReason" class="cancel-panel-container" @click.self="closeCancelReason">
+                <CancelPanel :needs-cancel-reason="needsCancelReason" :cancelling="cancelling" @cancel="cancelOrder"
+                    @close="closeCancelReason" />
             </div>
 
-            <button v-else-if="canCancelOrder" type="button" class="cancel-btn" :disabled="cancelling" @click="openCancelReason">
+            <button v-else-if="canCancelOrder" type="button" class="cancel-btn" :disabled="cancelling"
+                @click="openCancelReason">
                 {{ cancelling ? 'CANCELLING...' : 'CANCEL ORDER' }}
             </button>
         </section>
@@ -166,39 +134,22 @@
 
             <div class="field">
                 <label for="item">Item</label>
-                <textarea
-                    id="item"
-                    v-model.trim="form.item"
-                    rows="3"
-                    placeholder="Iced Kopi C"
-                    maxlength="255"
-                    @input="form.item = cleanRequestText(form.item)"
-                    required
-                ></textarea>
+                <textarea id="item" v-model.trim="form.item" rows="3" placeholder="Iced Kopi C" maxlength="255"
+                    @input="form.item = cleanRequestText(form.item)" required></textarea>
             </div>
 
             <div class="field">
                 <label for="special">Special Request <span class="label-optional">(optional)</span></label>
-                <textarea
-                    id="special"
-                    v-model.trim="form.specialRequest"
-                    rows="3"
-                    placeholder="Please help me say lesser sugar..."
-                    maxlength="255"
-                    @input="form.specialRequest = cleanRequestText(form.specialRequest)"
-                ></textarea>
+                <textarea id="special" v-model.trim="form.specialRequest" rows="3"
+                    placeholder="Please help me say lesser sugar..." maxlength="255"
+                    @input="form.specialRequest = cleanRequestText(form.specialRequest)"></textarea>
             </div>
 
             <div class="field">
                 <label for="deliveryInfo">Delivery Info <span class="label-optional">(optional)</span></label>
-                <textarea
-                    id="deliveryInfo"
-                    v-model.trim="form.deliveryInfo"
-                    rows="3"
-                    placeholder="e.g. I'm at the second table from the door"
-                    maxlength="255"
-                    @input="form.deliveryInfo = cleanRequestText(form.deliveryInfo)"
-                ></textarea>
+                <textarea id="deliveryInfo" v-model.trim="form.deliveryInfo" rows="3"
+                    placeholder="e.g. I'm at the second table from the door" maxlength="255"
+                    @input="form.deliveryInfo = cleanRequestText(form.deliveryInfo)"></textarea>
             </div>
 
             <p v-if="error" class="form-error">{{ error }}</p>
@@ -220,6 +171,8 @@ import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
 import { useAuthStore } from '../stores/auth';
 import { useRequestStore } from '../stores/requests';
+
+import CancelPanel from '../components/CancelPanel.vue';
 import BottomNav from '../components/BottomNav.vue';
 
 const toast = useToast();
@@ -254,7 +207,6 @@ const error = ref(null);
 const locationError = ref('');
 const runnerOnline = ref(false);
 const showCancelReason = ref(false);
-const cancelReason = ref('');
 
 const unsupportedTextPattern = /[<>\u0000-\u001F\u007F]|\b(?:https?:\/\/|www\.|javascript:|data:)/i;
 
@@ -422,31 +374,33 @@ async function submit() {
     }
 }
 
-async function cancelOrder() {
+async function cancelOrder(payload = {}) {
     if (!activeRequest.value || cancelling.value) return;
-    if (needsCancelReason.value && !cancelReason.value.trim()) {
-        error.value = 'Please add a reason before cancelling.';
-        return;
-    }
+
     const hadPenalty = needsCancelReason.value;
     cancelling.value = true;
     error.value = null;
+
     try {
         const { points } = await apiRequest.patch(`/requests/${activeRequest.value.id}/cancel`, {
-            reason: hadPenalty ? cancelReason.value : null,
+            reason: hadPenalty ? payload.reason : null,
         });
+
         if (hadPenalty) {
             authStore.setPoints(points);
         }
+
         activeRequest.value = null;
         requestStore.clearActiveRequest();
         runnerOnline.value = false;
         closeCancelReason();
         router.replace('/');
+
         toast.add({
             severity: 'info',
             summary: 'Order cancelled',
         });
+
         if (!catalog.value.length) loadCatalog();
     } catch (e) {
         error.value = e.message;
@@ -460,13 +414,12 @@ function openCancelReason() {
     if (needsCancelReason.value) {
         showCancelReason.value = true;
     } else {
-        cancelOrder();
+        cancelOrder({ reason: null });
     }
 }
 
 function closeCancelReason() {
     showCancelReason.value = false;
-    cancelReason.value = '';
 }
 
 async function completeOrder() {
@@ -1020,76 +973,19 @@ onUnmounted(() => {
     animation: searchDots 0.9s ease-in-out infinite;
 }
 
-.cancel-panel {
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 16px;
-    display: grid;
-    gap: 10px;
-    box-shadow: 0 8px 22px rgba(16, 24, 40, 0.08);
-}
-
-.cancel-panel-head {
+.cancel-panel-container {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.35);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: center;
 }
 
-.cancel-panel h3 {
-    margin: 0;
-    color: var(--text-main);
-    font-size: 1rem;
-    font-weight: 900;
-}
-
-.cancel-panel p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    font-weight: 600;
-    line-height: 1.35;
-}
-
-.cancel-penalty {
-    color: var(--color-danger) !important;
-}
-
-.cancel-panel textarea {
-    width: 100%;
-    resize: none;
-    border: 1px solid transparent;
-    border-radius: 14px;
-    padding: 12px 14px;
-    background: var(--bg-card);
-    color: var(--text-main);
-    font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.35;
-}
-
-.cancel-panel textarea:focus {
-    outline: none;
-    border-color: var(--color-danger);
-    box-shadow: 0 0 0 4px rgba(211, 58, 44, 0.12);
-}
-
-.cancel-close {
-    width: 34px;
-    height: 34px;
-    border: none;
-    border-radius: 50%;
-    background: var(--bg-card);
-    color: var(--text-muted);
-    cursor: pointer;
-}
-
-.cancel-actions {
-    display: grid;
-    grid-template-columns: 1fr 1.25fr;
-    gap: 10px;
+.cancel-panel-container :deep(.cancel-panel) {
+    width: min(100%, 480px);
 }
 
 .keep-btn {
@@ -1148,10 +1044,13 @@ onUnmounted(() => {
 }
 
 @keyframes runnerPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow: 0 0 0 0 rgba(36, 71, 131, 0.26);
         transform: scale(1);
     }
+
     50% {
         box-shadow: 0 0 0 10px rgba(36, 71, 131, 0);
         transform: scale(1.04);
@@ -1163,10 +1062,12 @@ onUnmounted(() => {
         opacity: 0.35;
         transform: translateY(-2px);
     }
+
     50% {
         opacity: 1;
         transform: translateY(2px);
     }
+
     100% {
         opacity: 0.35;
         transform: translateY(-2px);
@@ -1174,10 +1075,13 @@ onUnmounted(() => {
 }
 
 @keyframes searchDots {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(0.9);
         opacity: 0.7;
     }
+
     50% {
         transform: scale(1.12);
         opacity: 1;

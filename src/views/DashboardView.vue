@@ -1,6 +1,5 @@
 <template>
     <div class="app-screen">
-
         <div class="view-toggle-wrapper">
             <div class="segmented-control">
                 <button class="segment-btn" :class="{ active: viewMode === 'map' }" @click="viewMode = 'map'">
@@ -25,8 +24,8 @@
         </button>
 
         <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest" :active="!!myRequest"
-            :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" @accept="acceptRequest"
-            @cancel="handleDrawerCancel" @chat="openChat" />
+            :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" :cancelling="cancelling"
+            @accept="acceptRequest" @cancel="handleDrawerCancel" @chat="openChat" />
 
         <BottomNav />
 
@@ -42,13 +41,16 @@ import ListView from './ListView.vue';
 import BottomNav from '../components/BottomNav.vue';
 import DeliveryRequestDrawer from '../components/DeliveryRequestDrawer.vue';
 
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
+
 import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
 import { useAuthStore } from '../stores/auth';
 import { useRequestStore } from '../stores/requests';
 
 const router = useRouter();
-const auth = useAuthStore();
+const authStore = useAuthStore();
 const requestStore = useRequestStore();
 
 const viewMode = ref('map');
@@ -103,7 +105,7 @@ async function acceptRequest(id) {
 const socket = getSocket();
 
 function onCreated(request) {
-    const myId = auth.user?.id ?? auth.user?.userId;
+    const myId = authStore.user?.id ?? authStore.user?.userId;
     if (request.requester.id === myId) return;
     if (!requests.value.some((r) => r.id === request.id)) {
         requests.value.unshift(request);
@@ -190,19 +192,49 @@ function closeRequestDrawer() {
     manualDrawerVisible.value = false;
 }
 
-function handleDrawerCancel() {
-    if (!myRequest.value) {
-        manualDrawerVisible.value = false;
-        selectedMapRequest.value = null;
-    }
-}
-
 watch(myRequest, (request) => {
     if (request) {
         selectedMapRequest.value = null;
         manualDrawerVisible.value = true;
     }
 });
+
+const cancelling = ref(false);
+
+async function handleDrawerCancel(payload) {
+    if (!payload?.request || cancelling.value) return;
+
+    const request = payload.request;
+
+    const hadPenalty = request.status === 'accepted';
+    cancelling.value = true;
+    error.value = null;
+
+    try {
+        const { points } = await apiRequest.patch(`/requests/${request.id}/cancel`, {
+            reason: hadPenalty ? payload.reason : null,
+        });
+
+        if (hadPenalty) {
+            authStore.setPoints(points);
+        }
+
+        requests.value = requests.value.filter((r) => r.id !== request.id);
+        selectedMapRequest.value = null;
+        manualDrawerVisible.value = false;
+        myRequest.value = null;
+        requestStore.clearActiveRequest();
+
+        toast.add({
+            severity: 'info',
+            summary: 'Order cancelled',
+        });
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        cancelling.value = false;
+    }
+}
 
 function openChat(request) {
     console.log("CHAT ", request);

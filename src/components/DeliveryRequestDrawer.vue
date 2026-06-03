@@ -36,7 +36,10 @@
 
             <!-- Expanded Drawer -->
             <div class="expanded-content">
-                <div class="info-card">
+                <CancelPanel v-if="showCancelReason" :needs-cancel-reason="needsCancelReason" :cancelling="cancelling"
+                    @cancel="cancelOrder" @close="closeCancelReason" />
+
+                <div v-else class="info-card">
                     <div class="info-row">
                         <div class="info-label">
                             <span class="info-icon-bubble">
@@ -105,8 +108,9 @@
                     {{ accepting ? 'ACCEPTING...' : 'ACCEPT' }}
                 </button>
 
-                <button v-else-if="showCancel" type="button" class="cancel-button" @click="$emit('cancel', request)">
-                    CANCEL <span>(-10 PTS)</span>
+                <button v-else-if="canCancelOrder" type="button" class="cancel-button" :disabled="cancelling"
+                    @click="openCancelReason">
+                    CANCEL <span>(-1 PT)</span>
                 </button>
             </div>
         </section>
@@ -115,6 +119,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+
+import CancelPanel from './CancelPanel.vue';
 
 const props = defineProps({
     visible: {
@@ -132,10 +138,14 @@ const props = defineProps({
     active: {
         type: Boolean,
         default: false
+    },
+    cancelling: {
+        type: Boolean,
+        default: false
     }
 });
 
-defineEmits(['accept', 'cancel', 'chat']);
+const emit = defineEmits(['accept', 'cancel', 'chat']);
 
 const isExpanded = ref(false);
 const dragStartY = ref(null);
@@ -146,14 +156,55 @@ const showAccept = computed(() => {
     return !props.active && props.request?.status === 'open';
 });
 
+// Cancel
 const showCancel = computed(() => {
     return props.active || isAccepted.value;
 });
 
+const showCancelReason = ref(false);
+
+const needsCancelReason = computed(() => props.request?.status === 'accepted');
+
+const canCancelOrder = computed(() => {
+    return ['open', 'accepted'].includes(props.request?.status);
+});
+
+function openCancelReason() {
+    if (needsCancelReason.value) {
+        showCancelReason.value = true;
+    } else {
+        cancelOrder();
+    }
+}
+
+function closeCancelReason() {
+    showCancelReason.value = false;
+}
+
+function cancelOrder(payload = {}) {
+    if (!props.request || props.cancelling) return;
+
+    emit('cancel', {
+        request: props.request,
+        reason: payload.reason ?? null,
+        error: payload.error
+    });
+}
+
+watch(
+    () => props.request?.id,
+    () => {
+        isExpanded.value = false;
+        closeCancelReason();
+    }
+);
+
+// Chat
 const showChat = computed(() => {
     return isAccepted.value || props.active;
 });
 
+// UI Elements
 const showRunner = computed(() => {
     return props.request?.deliverer;
 });
@@ -209,13 +260,6 @@ function endDrag(event) {
 
     dragStartY.value = null;
 }
-
-watch(
-    () => props.request?.id,
-    () => {
-        isExpanded.value = false;
-    }
-);
 </script>
 
 <style scoped>
@@ -475,7 +519,7 @@ watch(
 }
 
 .cancel-button {
-    background: var(--color-error);
+    background: var(--color-danger);
 }
 
 .cancel-button span {
