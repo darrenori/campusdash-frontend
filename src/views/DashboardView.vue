@@ -14,7 +14,7 @@
 
         <div class="content-area">
             <MapView v-if="viewMode === 'map'" :requests="requests" :my-request="myRequest" :accepting-id="acceptingId"
-                :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
+                :online-user-ids="onlineUserIds" @select-request="openRequestDrawer" @map-click="closeRequestDrawer" />
             <ListView v-else :requests="requests" :my-request="myRequest" :loading="loading" :error="error"
                 :accepting-id="acceptingId" :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
         </div>
@@ -24,18 +24,23 @@
             <span>Request</span>
         </button>
 
+        <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest" :active="!!myRequest"
+            :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" @accept="acceptRequest"
+            @cancel="handleDrawerCancel" @chat="openChat" />
+
         <BottomNav />
 
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
-import MapView from '../components/MapView.vue';
-import ListView from '../components/ListView.vue';
+import MapView from './MapView.vue';
+import ListView from './ListView.vue';
 import BottomNav from '../components/BottomNav.vue';
+import DeliveryRequestDrawer from '../components/DeliveryRequestDrawer.vue';
 
 import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
@@ -46,7 +51,7 @@ const router = useRouter();
 const auth = useAuthStore();
 const requestStore = useRequestStore();
 
-const viewMode = ref('list');
+const viewMode = ref('map');
 
 const requests = ref([]);
 const myRequest = ref(null);
@@ -66,9 +71,9 @@ async function loadRequests() {
         requests.value = data;
         myRequest.value = active;
         requestStore.setActiveRequest(active);
-        if (active) {
-            router.replace('/request');
-        }
+        // if (active) {
+        //     router.replace('/request');
+        // }
     } catch (e) {
         error.value = e.message;
     } finally {
@@ -82,9 +87,10 @@ async function acceptRequest(id) {
     try {
         const { request } = await apiRequest.patch(`/requests/${id}/accept`, {});
         requests.value = requests.value.filter((r) => r.id !== id);
+        selectedMapRequest.value = null;
+        manualDrawerVisible.value = true;
         myRequest.value = request;
         requestStore.setActiveRequest(request);
-        router.replace('/request');
     } catch (e) {
         error.value = e.message;
         loadRequests();
@@ -109,24 +115,39 @@ function onAccepted({ id }) {
 }
 
 function onActiveRequest(request) {
+    selectedMapRequest.value = null;
+    manualDrawerVisible.value = true;
     myRequest.value = request;
     requestStore.setActiveRequest(request);
-    router.replace('/request');
 }
 
 function onCancelled({ id }) {
     requests.value = requests.value.filter((r) => r.id !== id);
+
+    if (selectedMapRequest.value?.id === id) {
+        selectedMapRequest.value = null;
+        manualDrawerVisible.value = false;
+    }
+
     if (myRequest.value?.id === id) {
         myRequest.value = null;
         requestStore.clearActiveRequest();
+        manualDrawerVisible.value = false;
     }
 }
 
 function onCompleted({ id }) {
     requests.value = requests.value.filter((r) => r.id !== id);
+
+    if (selectedMapRequest.value?.id === id) {
+        selectedMapRequest.value = null;
+        manualDrawerVisible.value = false;
+    }
+
     if (myRequest.value?.id === id) {
         myRequest.value = null;
         requestStore.clearActiveRequest();
+        manualDrawerVisible.value = false;
     }
 }
 
@@ -143,6 +164,48 @@ function onPresenceUpdate({ userId, online }) {
         next.delete(id);
     }
     onlineUserIds.value = next;
+}
+
+// Drawer Stuff
+const selectedMapRequest = ref(null);
+const manualDrawerVisible = ref(false);
+
+const drawerRequest = computed(() => {
+    return myRequest.value || selectedMapRequest.value;
+});
+
+const drawerVisible = computed(() => {
+    return Boolean(drawerRequest.value);
+});
+
+function openRequestDrawer(request) {
+    selectedMapRequest.value = request;
+    manualDrawerVisible.value = true;
+}
+
+function closeRequestDrawer() {
+    if (myRequest.value) return;
+
+    selectedMapRequest.value = null;
+    manualDrawerVisible.value = false;
+}
+
+function handleDrawerCancel() {
+    if (!myRequest.value) {
+        manualDrawerVisible.value = false;
+        selectedMapRequest.value = null;
+    }
+}
+
+watch(myRequest, (request) => {
+    if (request) {
+        selectedMapRequest.value = null;
+        manualDrawerVisible.value = true;
+    }
+});
+
+function openChat(request) {
+    console.log("CHAT ", request);
 }
 
 onMounted(() => {

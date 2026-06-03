@@ -1,11 +1,12 @@
 <template>
     <div class="map-view">
         <GoogleMap :api-key="apiKey" :map-id="mapId" class="google-map" :center="mapCenter" :zoom="15"
-            :disable-default-ui="true">
+            :disable-default-ui="true" :clickable-icons="false" :keyboard-shortcuts="false" gesture-handling="greedy"
+            @click="$emit('map-click')">
             <AdvancedMarker v-for="request in requests" :key="request.id" :options="{
                 position: request.deliveryCoords,
                 title: request.deliveryLocation
-            }" @click="handleMarkerClick(request)" />
+            }" @click="$emit('select-request', request)" />
         </GoogleMap>
     </div>
 </template>
@@ -33,6 +34,8 @@ const props = defineProps({
     }
 });
 
+defineEmits(['select-request', 'map-click']);
+
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
@@ -42,12 +45,10 @@ const defaultCenter = {
 };
 
 const mapCenter = computed(() => {
-    return props.requests[0]?.deliveryCoords || defaultCenter;
+    return props.myRequest?.deliveryCoords
+        || props.requests[0]?.deliveryCoords
+        || defaultCenter;
 });
-
-function handleMarkerClick(request) {
-    console.log('Selected:', request);
-}
 </script>
 
 <style scoped>
