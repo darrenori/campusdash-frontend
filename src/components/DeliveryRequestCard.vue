@@ -78,12 +78,10 @@ defineEmits(['accept']);
 const resolvedPfpUrl = computed(() => {
     const rawUrl = props.request?.requester?.pfpUrl;
     if (!rawUrl) return null;
+    if (rawUrl.startsWith('http')) return rawUrl;
 
     let fileServerUrl = import.meta.env.VITE_FILE_SERVER_URL || '';
-
-    if (fileServerUrl.endsWith('/')) {
-        fileServerUrl = fileServerUrl.slice(0, -1);
-    }
+    if (fileServerUrl.endsWith('/')) fileServerUrl = fileServerUrl.slice(0, -1);
 
     return `${fileServerUrl}${rawUrl}`;
 });

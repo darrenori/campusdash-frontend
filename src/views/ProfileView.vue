@@ -105,8 +105,12 @@ const userProfile = computed(() => {
     if (fileServerUrl.endsWith('/')) {
         fileServerUrl = fileServerUrl.slice(0, -1);
     }
-    const fullPfpPath = userData?.pfp_url ? `${fileServerUrl}${userData.pfp_url}` : null;
-    const fullQrPath = userData?.paynow_qr_url ? `${fileServerUrl}${userData.paynow_qr_url}` : null;
+    const resolvePath = (url) => {
+        if (!url) return null;
+        return url.startsWith('http') ? url : `${fileServerUrl}${url}`;
+    };
+    const fullPfpPath = resolvePath(userData?.pfp_url);
+    const fullQrPath = resolvePath(userData?.paynow_qr_url);
 
     return {
         username: userData?.username || 'Guest',
