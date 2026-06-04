@@ -71,6 +71,9 @@
                     <div class="step-copy">
                         <h2>{{ isDeliverer ? 'Deliver the Order' : (hasRunner ? 'Runner Found' : 'Finding Runner...') }}
                         </h2>
+                        <p v-if="redirectingToMap">
+                            Redirecting to Dashboard...
+                        </p>
                         <p>
                             <template v-if="isDeliverer">
                                 {{ activeRequest.deliveryLocation }}
@@ -164,7 +167,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { apiRequest } from '../utils/api';
@@ -480,6 +483,8 @@ function onAccepted(payload) {
     requestStore.setActiveRequest(request);
     joinOrderRoom(request);
     checkRunnerPresence(request);
+
+    redirectToMapAfterRunnerFound();
 }
 
 function onDelivered(payload) {
@@ -531,6 +536,22 @@ function onPresenceUpdate({ userId, online }) {
     }
 }
 
+// Redirect only when Runner Found while already on this page
+const redirectingToMap = ref(false);
+let redirectTimer = null;
+
+function redirectToMapAfterRunnerFound() {
+    if (redirectTimer) return;
+
+    redirectingToMap.value = true;
+
+    redirectTimer = setTimeout(() => {
+        redirectingToMap.value = false;
+        redirectTimer = null;
+        router.replace('/');
+    }, 3000);
+}
+
 onMounted(() => {
     loadActiveRequest();
     loadCatalog();
@@ -550,6 +571,10 @@ onUnmounted(() => {
     socket.off('request:cancelled', onCancelled);
     socket.off('request:completed', onCompleted);
     socket.off('presence:update', onPresenceUpdate);
+
+    if (redirectTimer) {
+        clearTimeout(redirectTimer);
+    }
 });
 </script>
 
