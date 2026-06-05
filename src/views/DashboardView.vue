@@ -13,7 +13,7 @@
 
         <div class="content-area">
             <MapView v-if="viewMode === 'map'" :requests="requests" :my-request="myRequest" :accepting-id="acceptingId"
-                :online-user-ids="onlineUserIds" @select-request="openRequestDrawer" @map-click="closeRequestDrawer" />
+                :online-user-ids="onlineUserIds" :current-user-id="authStore.user?.id" @select-request="openRequestDrawer" @map-click="closeRequestDrawer" />
             <ListView v-else :requests="requests" :my-request="myRequest" :loading="loading" :error="error"
                 :accepting-id="acceptingId" :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
         </div>
@@ -105,7 +105,7 @@ async function acceptRequest(id) {
 const socket = getSocket();
 
 function onCreated(request) {
-    const myId = authStore.user?.id ?? authStore.user?.userId;
+    const myId = authStore.user?.id;
     if (request.requester.id === myId) return;
     if (!requests.value.some((r) => r.id === request.id)) {
         requests.value.unshift(request);

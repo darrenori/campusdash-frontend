@@ -2,44 +2,47 @@
     <div class="map-view">
         <GoogleMap ref="mapRef" :api-key="apiKey" :map-id="mapId" class="google-map" :center="mapCenter" :zoom="16"
             :disable-default-ui="true" :clickable-icons="false" :keyboard-shortcuts="false" @click="$emit('map-click')">
-            <AdvancedMarker v-for="request in requests" v-if="!myRequest" :key="request.id" :options="{
-                position: request.deliveryCoords,
-                title: request.deliveryLocation
-            }" :pin-options="{
-                background: '#d33a2c',
-                borderColor: '#b91c1c',
-                glyphColor: '#ffffff'
-            }" @click="$emit('select-request', request)" />
+            <div v-if="!myRequest">
+                <AdvancedMarker v-for="request in requests" :key="request.id" :options="{
+                    position: request.deliveryCoords,
+                    title: request.deliveryLocation
+                }" :pin-options="{
+                    background: '#d33a2c',
+                    borderColor: '#b91c1c',
+                    glyphColor: '#ffffff',
+                }" @click="$emit('select-request', request)" />
+            </div>
 
-            <AdvancedMarker v-if="currentLocation" :options="{
-                position: currentLocation,
-                title: 'My Location'
-            }">
-                <template #content>
-                    <div class="live-location-dot"></div>
-                </template>
-            </AdvancedMarker>
+            <div v-else>
+                <AdvancedMarker v-if="runnersCurrentLocation"
+                    :options="{ position: runnersCurrentLocation, title: 'Runner\'s Location' }">
+                    <template #content>
+                        <div class="live-location-dot"></div>
+                    </template>
+                </AdvancedMarker>
 
-            <AdvancedMarker v-if="myRequest?.pickupCoords" :options="pickupMarkerOptions" :pin-options="{
-                background: '#f59e0b',
-                borderColor: '#d97706',
-                glyphColor: '#ffffff',
-                glyphText: 'S'
-            }" />
+                <AdvancedMarker v-if="myRequest.pickupCoords" :options="pickupMarkerOptions" :pin-options="{
+                    background: '#f59e0b',
+                    borderColor: '#d97706',
+                    glyphColor: '#ffffff',
+                    glyphText: 'S'
+                }" />
 
-            <AdvancedMarker v-if="myRequest?.deliveryCoords" :options="deliveryMarkerOptions" :pin-options="{
-                background: '#d33a2c',
-                borderColor: '#b91c1c',
-                glyphColor: '#ffffff',
-                glyphText: 'D'
-            }" />
+                <AdvancedMarker v-if="myRequest.deliveryCoords" :options="deliveryMarkerOptions" :pin-options="{
+                    background: '#d33a2c',
+                    borderColor: '#b91c1c',
+                    glyphColor: '#ffffff',
+                    glyphText: 'D'
+                }" />
+            </div>
         </GoogleMap>
     </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { GoogleMap, AdvancedMarker } from 'vue3-google-map';
+import { getSocket } from '../utils/socket';
 
 const props = defineProps({
     requests: {
@@ -57,6 +60,10 @@ const props = defineProps({
     onlineUserIds: {
         type: Object,
         required: true
+    },
+    currentUserId: {
+        type: [Number, String],
+        default: null
     }
 });
 
@@ -66,7 +73,7 @@ const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
 const mapRef = ref(null);
-const currentLocation = ref(null);
+const runnersCurrentLocation = ref(null);
 const hasCenteredOnUser = ref(false);
 
 let routePolylines = [];
@@ -106,12 +113,12 @@ const deliveryMarkerOptions = computed(() => {
 
 function centerOnUserOnce() {
     if (hasCenteredOnUser.value) return;
-    if (!currentLocation.value) return;
+    if (!runnersCurrentLocation.value) return;
 
     const map = mapRef.value?.map;
     if (!map) return;
 
-    map.panTo(currentLocation.value);
+    map.panTo(runnersCurrentLocation.value);
     map.setZoom(17);
 
     hasCenteredOnUser.value = true;
@@ -122,10 +129,20 @@ function trackUserLocation() {
 
     geoWatchId = navigator.geolocation.watchPosition(
         (position) => {
-            currentLocation.value = {
+            runnersCurrentLocation.value = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             };
+
+            if (isRunner.value) {
+                const socket = getSocket();
+
+                socket?.emit('delivery:location', {
+                    requestId: props.myRequest.id,
+                    latitude: runnersCurrentLocation.value.lat,
+                    longitude: runnersCurrentLocation.value.lng
+                });
+            }
 
             if (props.myRequest) {
                 centerOnUserOnce();
@@ -152,7 +169,49 @@ function stopTrackingUserLocation() {
     }
 
     geoWatchId = null;
-    currentLocation.value = null;
+    runnersCurrentLocation.value = null;
+}
+
+const isRunner = computed(() => {
+    return String(props.myRequest?.deliverer?.id) === String(props.currentUserId);
+});
+
+const isBuyer = computed(() => {
+    return String(props.myRequest?.requester?.id) === String(props.currentUserId);
+});
+
+function joinRequestRoom() {
+    if (!props.myRequest?.id) return;
+
+    const socket = getSocket();
+
+    socket?.emit('request:join', {
+        requestId: props.myRequest.id
+    });
+}
+
+// Runner should emit location
+function onRunnerLocation(payload) {
+    if (!props.myRequest) return;
+    if (Number(payload.requestId) !== Number(props.myRequest.id)) return;
+
+    runnersCurrentLocation.value = {
+        lat: payload.latitude,
+        lng: payload.longitude
+    };
+
+    centerOnUserOnce();
+}
+
+// Buyer should listen for runner location
+function listenForRunnerLocation() {
+    const socket = getSocket();
+    socket?.on('delivery:location', onRunnerLocation);
+}
+
+function stopListeningForRunnerLocation() {
+    const socket = getSocket();
+    socket?.off('delivery:location', onRunnerLocation);
 }
 
 function clearRoute() {
@@ -178,7 +237,7 @@ async function calculateRoute() {
         return;
     }
 
-    if (!currentLocation.value) return;
+    if (!runnersCurrentLocation.value) return;
     if (!props.myRequest.pickupCoords || !props.myRequest.deliveryCoords) return;
 
     const googleMaps = window.google?.maps;
@@ -195,7 +254,7 @@ async function calculateRoute() {
         const { Route } = await googleMaps.importLibrary('routes');
 
         const { routes } = await Route.computeRoutes({
-            origin: currentLocation.value,
+            origin: runnersCurrentLocation.value,
             destination: props.myRequest.deliveryCoords,
             intermediates: [
                 {
@@ -235,45 +294,33 @@ async function calculateRoute() {
 watch(
     () => props.myRequest,
     (request) => {
-        if (request) {
-            hasCenteredOnUser.value = false;
+        hasCenteredOnUser.value = false;
+        clearRoute();
+
+        stopTrackingUserLocation();
+        stopListeningForRunnerLocation();
+
+        if (!request) {
+            runnersCurrentLocation.value = null;
+            return;
+        }
+
+        joinRequestRoom();
+
+        if (isRunner.value) {
             trackUserLocation();
-            calculateRoute();
-        } else {
-            hasCenteredOnUser.value = false;
-            stopTrackingUserLocation();
-            clearRoute();
+        }
+
+        if (isBuyer.value) {
+            listenForRunnerLocation();
         }
     },
     { immediate: true }
 );
 
-watch(
-    () => [
-        props.myRequest?.id,
-        props.myRequest?.pickupCoords?.lat,
-        props.myRequest?.pickupCoords?.lng,
-        props.myRequest?.deliveryCoords?.lat,
-        props.myRequest?.deliveryCoords?.lng
-    ],
-    () => {
-        if (props.myRequest) {
-            hasCenteredOnUser.value = false;
-            clearRoute();
-            calculateRoute();
-        }
-    }
-);
-
-onMounted(() => {
-    if (props.myRequest) {
-        trackUserLocation();
-        calculateRoute();
-    }
-});
-
 onUnmounted(() => {
     stopTrackingUserLocation();
+    stopListeningForRunnerLocation();
     clearRoute();
 });
 </script>
