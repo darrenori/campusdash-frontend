@@ -45,11 +45,13 @@ const isDiscoverActive = computed(() =>
 );
 
 function goDiscover() {
-    if (requestStore.activeRequest) {
-        router.push('/request');
-    } else {
-        router.push('/');
-    }
+    // if (requestStore.activeRequest) {
+    //     router.push('/request');
+    // } else {
+    //     router.push('/');
+    // }
+
+    router.push('/');
 }
 </script>
 

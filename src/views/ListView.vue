@@ -37,7 +37,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import DeliveryRequestCard from './DeliveryRequestCard.vue';
+import DeliveryRequestCard from '../components/DeliveryRequestCard.vue';
 
 const props = defineProps({
     requests: { type: Array, required: true },

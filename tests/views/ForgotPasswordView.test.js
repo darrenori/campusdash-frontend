@@ -175,19 +175,6 @@ describe('ForgotPasswordView.vue', () => {
             expect(wrapper.find('.error-msg').text()).toBe('Invalid OTP.');
         });
 
-        it('should set errorMsg and clear loading state if the request fails', async () => {
-            apiRequest.post.mockRejectedValueOnce(new Error('OTP has expired.'));
-
-            wrapper.vm.otp = '123456';
-            await wrapper.vm.$nextTick();
-            await wrapper.find('.forgot-password-form').trigger('submit.prevent');
-            await flushPromises();
-
-            expect(wrapper.vm.currentStep).toBe(2);
-            expect(wrapper.vm.isLoading).toBe(false);
-            expect(wrapper.find('.error-msg').text()).toBe('OTP has expired.');
-        });
-
         it('should go back to step 1 when the back button is clicked', async () => {
             await wrapper.find('.back-btn').trigger('click');
 

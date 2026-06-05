@@ -1,6 +1,5 @@
 <template>
     <div class="app-screen">
-
         <div class="view-toggle-wrapper">
             <div class="segmented-control">
                 <button class="segment-btn" :class="{ active: viewMode === 'map' }" @click="viewMode = 'map'">
@@ -13,8 +12,9 @@
         </div>
 
         <div class="content-area">
-            <MapView v-if="viewMode === 'map'" :requests="requests" :my-request="myRequest"
-                :online-user-ids="onlineUserIds" />
+            <MapView v-if="viewMode === 'map'" :requests="requests" :my-request="myRequest" :accepting-id="acceptingId"
+                :online-user-ids="onlineUserIds" :current-user-id="authStore.user?.id"
+                @select-request="openRequestDrawer" @map-click="closeRequestDrawer" />
             <ListView v-else :requests="requests" :my-request="myRequest" :loading="loading" :error="error"
                 :accepting-id="acceptingId" :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
         </div>
@@ -24,18 +24,27 @@
             <span>Request</span>
         </button>
 
+        <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest" :active="!!myRequest"
+            :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" :cancelling="cancelling"
+            :completing="completing" @accept="acceptRequest" @cancel="handleDrawerCancel" @complete="completeOrder"
+            @collected="markCollected" @chat="openChat" />
+
         <BottomNav />
 
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
-import MapView from '../components/MapView.vue';
-import ListView from '../components/ListView.vue';
+import MapView from './MapView.vue';
+import ListView from './ListView.vue';
 import BottomNav from '../components/BottomNav.vue';
+import DeliveryRequestDrawer from '../components/DeliveryRequestDrawer.vue';
+
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
 
 import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
@@ -43,10 +52,10 @@ import { useAuthStore } from '../stores/auth';
 import { useRequestStore } from '../stores/requests';
 
 const router = useRouter();
-const auth = useAuthStore();
+const authStore = useAuthStore();
 const requestStore = useRequestStore();
 
-const viewMode = ref('list');
+const viewMode = ref('map');
 
 const requests = ref([]);
 const myRequest = ref(null);
@@ -66,9 +75,6 @@ async function loadRequests() {
         requests.value = data;
         myRequest.value = active;
         requestStore.setActiveRequest(active);
-        if (active) {
-            router.replace('/request');
-        }
     } catch (e) {
         error.value = e.message;
     } finally {
@@ -82,9 +88,9 @@ async function acceptRequest(id) {
     try {
         const { request } = await apiRequest.patch(`/requests/${id}/accept`, {});
         requests.value = requests.value.filter((r) => r.id !== id);
+        selectedMapRequest.value = null;
         myRequest.value = request;
         requestStore.setActiveRequest(request);
-        router.replace('/request');
     } catch (e) {
         error.value = e.message;
         loadRequests();
@@ -95,9 +101,22 @@ async function acceptRequest(id) {
 
 // Socket.IO Integration
 const socket = getSocket();
+const currentUserId = computed(() => authStore.user?.id ?? authStore.user?.userId);
+
+function joinOrderRoom(request) {
+    if (!request?.id) return;
+
+    socket.emit('request:join', {
+        requestId: request.id
+    });
+}
+
+function isCurrentUser(userId) {
+    return Number(userId) === Number(currentUserId.value);
+}
 
 function onCreated(request) {
-    const myId = auth.user?.id ?? auth.user?.userId;
+    const myId = authStore.user?.id;
     if (request.requester.id === myId) return;
     if (!requests.value.some((r) => r.id === request.id)) {
         requests.value.unshift(request);
@@ -109,24 +128,71 @@ function onAccepted({ id }) {
 }
 
 function onActiveRequest(request) {
+    selectedMapRequest.value = null;
     myRequest.value = request;
     requestStore.setActiveRequest(request);
-    router.replace('/request');
 }
 
-function onCancelled({ id }) {
+function onCancelled({ id, reason, cancelledBy }) {
     requests.value = requests.value.filter((r) => r.id !== id);
+
+    if (selectedMapRequest.value?.id === id) {
+        selectedMapRequest.value = null;
+    }
+
     if (myRequest.value?.id === id) {
-        myRequest.value = null;
-        requestStore.clearActiveRequest();
+        const cancelledByMe = isCurrentUser(cancelledBy);
+
+        clearActiveOrder()
+
+        if (!cancelledByMe) {
+            toast.add({
+                severity: 'info',
+                summary: 'Order cancelled',
+                detail: reason || 'The other user cancelled the order.',
+            });
+        }
     }
 }
 
 function onCompleted({ id }) {
-    requests.value = requests.value.filter((r) => r.id !== id);
+    if (selectedMapRequest.value?.id === id) {
+        selectedMapRequest.value = null;
+    }
+
     if (myRequest.value?.id === id) {
-        myRequest.value = null;
-        requestStore.clearActiveRequest();
+        const wasDeliverer = isCurrentUser(myRequest.value.deliverer?.id);
+
+        clearActiveOrder()
+
+        if (wasDeliverer) {
+            authStore.adjustPoints?.(1);
+
+            toast.add({
+                severity: 'success',
+                summary: 'Order completed',
+                detail: 'The order has been marked as completed.',
+            });
+        }
+    }
+
+    requests.value = requests.value.filter((r) => r.id !== id);
+}
+
+function onCollected({ id, request }) {
+    if (myRequest.value?.id !== id) return;
+
+    myRequest.value = request;
+    requestStore.setActiveRequest(request);
+
+    const isRequester = isCurrentUser(request.requester?.id);
+
+    if (isRequester && request.status !== 'completed') {
+        toast.add({
+            severity: 'success',
+            summary: 'Order collected',
+            detail: 'The Runner has collected the order.',
+        });
     }
 }
 
@@ -145,6 +211,136 @@ function onPresenceUpdate({ userId, online }) {
     onlineUserIds.value = next;
 }
 
+// Actions
+const completing = ref(false);
+
+async function completeOrder(request) {
+    if (!request || completing.value) return;
+
+    completing.value = true;
+    error.value = null;
+
+    try {
+        const { points } = await apiRequest.patch(`/requests/${request.id}/complete`, {});
+
+        authStore.setPoints(points);
+
+        clearActiveOrder()
+
+        toast.add({
+            severity: 'success',
+            summary: 'Order completed',
+        });
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        completing.value = false;
+    }
+}
+
+async function markCollected(request) {
+    if (!request || completing.value) return;
+
+    completing.value = true;
+    error.value = null;
+
+    try {
+        const { request: updatedRequest } = await apiRequest.patch(`/requests/${request.id}/collected`, {});
+
+        myRequest.value = updatedRequest;
+        requestStore.setActiveRequest(updatedRequest);
+
+        toast.add({
+            severity: 'success',
+            summary: 'Collected Order',
+            detail: 'The Runner has collected the order.',
+        });
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        completing.value = false;
+    }
+}
+
+// Drawer Stuff
+const selectedMapRequest = ref(null);
+
+const drawerRequest = computed(() => {
+    return myRequest.value || selectedMapRequest.value;
+});
+
+const drawerVisible = computed(() => {
+    return Boolean(drawerRequest.value);
+});
+
+function openRequestDrawer(request) {
+    selectedMapRequest.value = request;
+}
+
+function closeRequestDrawer() {
+    if (myRequest.value) return;
+
+    selectedMapRequest.value = null;
+}
+
+watch(
+    () => myRequest.value?.id,
+    () => {
+        joinOrderRoom(myRequest.value);
+    }
+);
+
+watch(myRequest, (request) => {
+    if (request) {
+        selectedMapRequest.value = null;
+    }
+});
+
+const cancelling = ref(false);
+
+function clearActiveOrder() {
+    myRequest.value = null;
+    requestStore.clearActiveRequest();
+    selectedMapRequest.value = null;
+}
+
+async function handleDrawerCancel(payload) {
+    if (!payload?.request || cancelling.value) return;
+
+    const request = payload.request;
+    const hadPenalty = request.status === 'accepted';
+
+    cancelling.value = true;
+    error.value = null;
+
+    try {
+        const { points } = await apiRequest.patch(`/requests/${request.id}/cancel`, {
+            reason: hadPenalty ? payload.reason : null,
+        });
+
+        if (hadPenalty) {
+            authStore.setPoints(points);
+        }
+
+        requests.value = requests.value.filter((r) => r.id !== request.id);
+        clearActiveOrder()
+
+        toast.add({
+            severity: 'info',
+            summary: 'Order cancelled',
+            detail: payload.reason || 'You cancelled the order.',
+        });
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        cancelling.value = false;
+    }
+}
+
+function openChat(request) {
+    console.log("CHAT ", request);
+}
+
 onMounted(() => {
     loadRequests();
     socket.on('connect', loadRequests);
@@ -152,6 +348,7 @@ onMounted(() => {
     socket.on('request:accepted', onAccepted);
     socket.on('request:active', onActiveRequest);
     socket.on('request:cancelled', onCancelled);
+    socket.on('request:collected', onCollected);
     socket.on('request:completed', onCompleted);
     socket.on('presence:snapshot', onPresenceSnapshot);
     socket.on('presence:update', onPresenceUpdate);
@@ -164,6 +361,7 @@ onUnmounted(() => {
     socket.off('request:accepted', onAccepted);
     socket.off('request:active', onActiveRequest);
     socket.off('request:cancelled', onCancelled);
+    socket.off('request:collected', onCollected);
     socket.off('request:completed', onCompleted);
     socket.off('presence:snapshot', onPresenceSnapshot);
     socket.off('presence:update', onPresenceUpdate);

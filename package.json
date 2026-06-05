@@ -20,11 +20,13 @@
     "primevue": "^4.5.5",
     "socket.io-client": "^4.8.3",
     "vue": "^3.5.32",
-    "vue-router": "^5.0.6"
+    "vue-router": "^5.0.6",
+    "vue3-google-map": "^0.27.1"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@babel/preset-env": "^7.29.7",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/test-utils": "^2.4.10",
     "@vue/vue3-jest": "^29.2.6",
