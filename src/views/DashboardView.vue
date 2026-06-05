@@ -224,6 +224,7 @@ async function completeOrder(request) {
         const { points } = await apiRequest.patch(`/requests/${request.id}/complete`, {});
 
         authStore.setPoints(points);
+        authStore.incrementDeliveries();
 
         clearActiveOrder()
 
