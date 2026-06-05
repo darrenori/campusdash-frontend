@@ -1,7 +1,8 @@
 <template>
     <div class="map-view">
-        <GoogleMap ref="mapRef" :api-key="apiKey" :map-id="mapId" class="google-map" :center="mapCenter" :zoom="16"
-            :disable-default-ui="true" :clickable-icons="false" :keyboard-shortcuts="false" @click="$emit('map-click')">
+        <GoogleMap :key="themeStore.isDark ? 'dark-map' : 'light-map'" ref="mapRef" :api-key="apiKey" :map-id="mapId"
+            class="google-map" :center="mapCenter" :zoom="16" :disable-default-ui="true" :keyboard-shortcuts="false"
+            :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'" @click="$emit('map-click')">
             <div v-if="!myRequest">
                 <AdvancedMarker v-for="request in requests" :key="request.id" :options="{
                     position: request.deliveryCoords,
@@ -43,6 +44,9 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { GoogleMap, AdvancedMarker } from 'vue3-google-map';
 import { getSocket } from '../utils/socket';
+import { useThemeStore } from '../stores/theme';
+
+const themeStore = useThemeStore();
 
 const props = defineProps({
     requests: {
@@ -231,6 +235,27 @@ function scheduleRouteRetry() {
     }, 250);
 }
 
+// Before collection, route to Stall
+// After collection, route to Delivery Location
+const routeDestination = computed(() => {
+    if (!props.myRequest) return null;
+
+    return props.myRequest.collectedAt
+        ? props.myRequest.deliveryCoords
+        : props.myRequest.pickupCoords;
+});
+
+watch(
+    () => props.myRequest?.collectedAt,
+    () => {
+        if (!isRunner.value) return;
+
+        clearRoute();
+        calculateRoute();
+    }
+);
+
+// Route calculation
 async function calculateRoute() {
     if (!props.myRequest) {
         clearRoute();
@@ -238,7 +263,7 @@ async function calculateRoute() {
     }
 
     if (!runnersCurrentLocation.value) return;
-    if (!props.myRequest.pickupCoords || !props.myRequest.deliveryCoords) return;
+    if (!routeDestination.value) return;
 
     const googleMaps = window.google?.maps;
     const map = mapRef.value?.map;
@@ -255,12 +280,7 @@ async function calculateRoute() {
 
         const { routes } = await Route.computeRoutes({
             origin: runnersCurrentLocation.value,
-            destination: props.myRequest.deliveryCoords,
-            intermediates: [
-                {
-                    location: props.myRequest.pickupCoords
-                }
-            ],
+            destination: routeDestination.value,
             travelMode: 'WALKING',
             fields: ['path']
         });

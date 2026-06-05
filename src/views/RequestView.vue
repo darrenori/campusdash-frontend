@@ -77,7 +77,7 @@
                         <p>
                             <template v-if="isDeliverer">
                                 {{ activeRequest.deliveryLocation }}
-                                <span v-if="activeRequest.deliveredAt" class="runner-status online">Delivered</span>
+                                <span v-if="activeRequest.collectedAt" class="runner-status online">Collected</span>
                             </template>
                             <template v-else-if="hasRunner">
                                 @{{ runnerName }}
@@ -88,8 +88,8 @@
                             <template v-else>Finding you a nearby runner...</template>
                         </p>
                         <button v-if="hasRunner" type="button" class="complete-btn"
-                            :disabled="completing || (isDeliverer && activeRequest.deliveredAt)"
-                            @click="isRequester ? completeOrder() : markDelivered()">
+                            :disabled="completing || (isDeliverer && activeRequest.collectedAt)"
+                            @click="isRequester ? completeOrder() : markCollected()">
                             {{ deliveryActionText }}
                         </button>
                     </div>
@@ -244,9 +244,10 @@ const isRequester = computed(() => Number(activeRequest.value?.requester?.id) ==
 const isDeliverer = computed(() => Number(activeRequest.value?.deliverer?.id) === Number(currentUserId.value));
 const needsCancelReason = computed(() => activeRequest.value?.status === 'accepted');
 const canCancelOrder = computed(() => ['open', 'accepted'].includes(activeRequest.value?.status));
+
 const deliveryActionText = computed(() => {
     if (completing.value) return isRequester.value ? 'COMPLETING...' : 'SAVING...';
-    if (isDeliverer.value) return activeRequest.value?.deliveredAt ? 'DELIVERED' : 'I HAVE DELIVERED';
+    if (isDeliverer.value) return activeRequest.value?.collectedAt ? 'ORDER PICKED UP' : 'PICKED UP ORDER';
     return 'COMPLETE ORDER';
 });
 
@@ -449,18 +450,18 @@ async function completeOrder() {
     }
 }
 
-async function markDelivered() {
+async function markCollected() {
     if (!activeRequest.value || completing.value || !isDeliverer.value) return;
     completing.value = true;
     error.value = null;
     try {
-        const { request } = await apiRequest.patch(`/requests/${activeRequest.value.id}/delivered`, {});
+        const { request } = await apiRequest.patch(`/requests/${activeRequest.value.id}/collected`, {});
         activeRequest.value = request;
         requestStore.setActiveRequest(request);
         toast.add({
             severity: 'success',
-            summary: 'Marked delivered',
-            life: 3000,
+            summary: 'Collected Order',
+            detail: 'The Runner has collected the order.',
         });
     } catch (e) {
         error.value = e.message;
@@ -487,7 +488,7 @@ function onAccepted(payload) {
     redirectToMapAfterRunnerFound();
 }
 
-function onDelivered(payload) {
+function onCollected(payload) {
     const request = payload?.request;
     if (!request || request.id !== activeRequest.value?.id) return;
     activeRequest.value = request;
@@ -495,7 +496,7 @@ function onDelivered(payload) {
     if (isRequester.value && request.status !== 'completed') {
         toast.add({
             severity: 'success',
-            summary: 'Your order has been marked as delivered.',
+            summary: 'Your order has been collected.',
         });
     }
 }
@@ -558,7 +559,7 @@ onMounted(() => {
     loadLocations();
     socket.on('request:active', onActiveRequest);
     socket.on('request:accepted', onAccepted);
-    socket.on('request:delivered', onDelivered);
+    socket.on('request:collected', onCollected);
     socket.on('request:cancelled', onCancelled);
     socket.on('request:completed', onCompleted);
     socket.on('presence:update', onPresenceUpdate);
@@ -567,7 +568,7 @@ onMounted(() => {
 onUnmounted(() => {
     socket.off('request:active', onActiveRequest);
     socket.off('request:accepted', onAccepted);
-    socket.off('request:delivered', onDelivered);
+    socket.off('request:collected', onCollected);
     socket.off('request:cancelled', onCancelled);
     socket.off('request:completed', onCompleted);
     socket.off('presence:update', onPresenceUpdate);

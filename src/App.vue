@@ -38,7 +38,15 @@ onMounted(() => {
   --text-subtle: rgba(120, 120, 130, 1);
   --border-color: rgba(55, 65, 81, 1);
   --theme-blue: #0065C9;
-  --divider-color: rgba(55, 65, 81, 0.5);
+  --divider-color: rgba(69, 69, 69, 0.5);
+
+  /* DRAWER DARK */
+  --drawer-bg: rgb(45, 45, 45);
+  --info-card: rgb(39, 39, 39);
+  --info-border: rgb(55, 55, 55);
+  --chat-button: rgb(45, 45, 45);
+  --bubble-bg: rgb(56, 56, 56);
+  --drawer-text: #c4c4c4;
 }
 
 /* LIGHT MODE (Default) */
@@ -53,6 +61,14 @@ onMounted(() => {
   --border-color: rgba(229, 231, 235, 1);
   --theme-blue: #003D7C;
   --divider-color: #f1f1f4;
+
+  /* DRAWER LIGHT */
+  --drawer-bg: rgb(255, 255, 255);
+  --info-card: rgb(243, 243, 243);
+  --info-border: lightgray;
+  --chat-button: white;
+  --bubble-bg: white;
+  --drawer-text: #003D7C;
 }
 
 html,

@@ -36,7 +36,7 @@
 
             <!-- Expanded Drawer -->
             <div class="expanded-content">
-                <CancelPanel v-if="showCancelReason" :needs-cancel-reason="needsCancelReason" :cancelling="cancelling"
+                <CancelPanel v-if="showCancelReason" class="cancel-panel" :needs-cancel-reason="needsCancelReason" :cancelling="cancelling"
                     @cancel="cancelOrder" @close="closeCancelReason" />
 
                 <div v-else class="info-card">
@@ -108,9 +108,15 @@
                     {{ accepting ? 'ACCEPTING...' : 'ACCEPT' }}
                 </button>
 
-                <button v-else-if="canCancelOrder" type="button" class="cancel-button" :disabled="cancelling"
+                <button v-if="!showAccept && hasRunner" type="button" class="complete-btn"
+                    :disabled="completing || (isDeliverer && request.collectedAt)" @click="handleDeliveryAction">
+                    {{ deliveryActionText }}
+                </button>
+
+                <button v-if="!showAccept && canCancelOrder" type="button" class="cancel-button" :disabled="cancelling"
                     @click="openCancelReason">
-                    CANCEL <span>(-1 PT)</span>
+                    {{ cancelling ? 'CANCELLING...' : 'CANCEL' }}
+                    <span v-if="needsCancelReason">(-1 PT)</span>
                 </button>
             </div>
         </section>
@@ -119,6 +125,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { useAuthStore } from '../stores/auth';
+const authStore = useAuthStore();
 
 import CancelPanel from './CancelPanel.vue';
 
@@ -142,10 +150,14 @@ const props = defineProps({
     cancelling: {
         type: Boolean,
         default: false
+    },
+    completing: {
+        type: Boolean,
+        default: false
     }
 });
 
-const emit = defineEmits(['accept', 'cancel', 'chat']);
+const emit = defineEmits(['accept', 'cancel', 'complete', 'collected', 'chat']);
 
 const isExpanded = ref(false);
 const dragStartY = ref(null);
@@ -156,7 +168,7 @@ const showAccept = computed(() => {
     return !props.active && props.request?.status === 'open';
 });
 
-// Cancel
+// Cancel Panel
 const showCancel = computed(() => {
     return props.active || isAccepted.value;
 });
@@ -198,6 +210,42 @@ watch(
         closeCancelReason();
     }
 );
+
+// User Roles
+const currentUserId = computed(() => {
+    return authStore.user?.id ?? authStore.user?.userId;
+});
+
+const isRequester = computed(() => {
+    return Number(props.request?.requester?.id) === Number(currentUserId.value);
+});
+
+const isDeliverer = computed(() => {
+    return Number(props.request?.deliverer?.id) === Number(currentUserId.value);
+});
+
+const hasRunner = computed(() => {
+    return props.request?.status === 'accepted' && Boolean(props.request?.deliverer);
+});
+
+const deliveryActionText = computed(() => {
+    if (props.completing) return isRequester.value ? 'COMPLETING...' : 'SAVING...';
+    if (isDeliverer.value) return props.request?.collectedAt ? 'ORDER PICKED UP' : 'PICKED UP ORDER';
+    return 'COMPLETE ORDER';
+});
+
+function handleDeliveryAction() {
+    if (!props.request || props.completing) return;
+
+    if (isRequester.value) {
+        emit('complete', props.request);
+        return;
+    }
+
+    if (isDeliverer.value && !props.request.collectedAt) {
+        emit('collected', props.request);
+    }
+}
 
 // Chat
 const showChat = computed(() => {
@@ -269,7 +317,7 @@ function endDrag(event) {
     right: 0;
     bottom: 50px;
     z-index: 900;
-    background: white;
+    background: var(--drawer-bg);
     border-radius: 28px 28px 0 0;
     padding: 0 20px 14px;
     box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.22);
@@ -279,7 +327,7 @@ function endDrag(event) {
 }
 
 .delivery-drawer.expanded {
-    max-height: calc(100dvh - 120px);
+    max-height: calc(100dvh - 80px);
 }
 
 .expanded-content {
@@ -333,8 +381,8 @@ function endDrag(event) {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    border: 2px solid var(--color-primary);
-    color: var(--color-primary);
+    border: 2px solid var(--drawer-text);
+    color: var(--drawer-text);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -350,25 +398,46 @@ function endDrag(event) {
 }
 
 .requester-name {
-    color: var(--color-primary);
+    color: var(--drawer-text);
     font-size: 0.8rem;
     font-weight: 800;
 }
 
 .request-preview {
     margin-top: 4px;
-    color: var(--color-primary);
+    color: var(--drawer-text);
     font-size: 0.8rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.complete-btn {
+    width: 100%;
+    border: none;
+    border-radius: 4px;
+    padding: 13px 18px;
+    background: var(--theme-blue);
+    color: white;
+    font-weight: 900;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.complete-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.cancel-button {
+    margin-top: 10px;
+}
+
 .chat-btn,
 .unexpanded-accept-btn {
     border: none;
-    background: white;
-    color: var(--color-primary);
+    background: var(--chat-button);
+    color: var(--drawer-text);
     border-radius: 12px;
     padding: 10px 14px;
     display: inline-flex;
@@ -381,7 +450,7 @@ function endDrag(event) {
 }
 
 .chat-btn {
-    box-shadow: 0 0 3px gray;
+    box-shadow: 0 0 3px var(--text-subtle);
 }
 
 .unexpanded-accept-btn {
@@ -390,11 +459,11 @@ function endDrag(event) {
 }
 
 .info-card {
-    border: 1px solid lightgray;
+    border: 1px solid var(--info-border);
     border-radius: 6px;
     overflow: hidden;
     margin-bottom: 14px;
-    background-color: rgb(243, 243, 243);
+    background-color: var(--info-card);
 }
 
 .info-row {
@@ -404,7 +473,7 @@ function endDrag(event) {
     justify-content: space-between;
     gap: 12px;
     padding: 8px 12px;
-    border-bottom: 1px solid lightgray;
+    border-bottom: 1px solid var(--info-border);
 }
 
 .info-row:last-child {
@@ -415,7 +484,7 @@ function endDrag(event) {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--color-primary);
+    color: var(--drawer-text);
     font-size: 0.68rem;
     font-weight: 700;
 }
@@ -424,7 +493,7 @@ function endDrag(event) {
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: white;
+    background: var(--bubble-bg);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -433,14 +502,14 @@ function endDrag(event) {
 
 .info-icon-bubble i {
     font-size: 0.75rem;
-    color: var(--color-primary);
+    color: var(--drawer-text);
 }
 
 .svg-icon {
     width: 14px;
     height: 14px;
     display: block;
-    background-color: var(--color-primary);
+    background-color: var(--drawer-text);
     flex-shrink: 0;
 }
 
@@ -471,7 +540,7 @@ function endDrag(event) {
 
 .items-section h3 {
     margin: 0 0 4px;
-    color: var(--color-primary);
+    color: var(--drawer-text);
     font-size: 1rem;
     font-weight: 800;
 }
@@ -481,7 +550,7 @@ function endDrag(event) {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    color: var(--color-primary);
+    color: var(--drawer-text);
     font-size: 0.8rem;
 }
 
@@ -535,5 +604,9 @@ function endDrag(event) {
 .drawer-slide-enter-from,
 .drawer-slide-leave-to {
     transform: translateY(100%);
+}
+
+.cancel-panel {
+    margin-bottom: 10px;
 }
 </style>

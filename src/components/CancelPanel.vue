@@ -168,7 +168,7 @@ function cancelOrder() {
     border: none;
     border-radius: 14px;
     padding: 12px 10px;
-    background: var(--bg-card);
+    background: var(--bubble-bg);
     color: var(--text-main);
     font-family: inherit;
     font-size: 0.82rem;
