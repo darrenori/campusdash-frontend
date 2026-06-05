@@ -45,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     function incrementDeliveries() {
         if (user.value != null) {
-            user.value.deliveries_completed = Number(user.value.deliveries_completed ?? 0) + 1;
+            user.value = { ...user.value, deliveries_completed: Number(user.value.deliveries_completed ?? 0) + 1 };
             localStorage.setItem('userData', JSON.stringify(user.value));
         }
     }
