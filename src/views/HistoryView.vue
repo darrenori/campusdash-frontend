@@ -55,7 +55,7 @@
         </div>
 
         <!-- Empty -->
-        <div v-else-if="filteredOrders.length === 0" class="center-state">
+        <div v-else-if="!hasOrders" class="center-state">
             <div class="state-icon"><i class="pi pi-inbox"></i></div>
             <p class="state-title">No orders yet</p>
             <p class="state-sub">{{ emptyMessage }}</p>
@@ -178,8 +178,8 @@
             </template>
 
             <!-- Show more -->
-            <button v-if="hasMorePast" class="show-more-btn" @click="showMore">
-                Show {{ Math.min(remainingCount, 15) }} more
+            <button v-if="hasMorePast" class="show-more-btn" :disabled="loadingMore" @click="showMore">
+                {{ loadingMore ? 'Loading…' : `Show ${Math.min(remainingCount, PAST_PAGE)} more` }}
             </button>
 
             <div class="bottom-spacer"></div>
@@ -190,14 +190,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { apiRequest } from '../utils/api';
 import { useAuthStore } from '../stores/auth';
 import BottomNav from '../components/BottomNav.vue';
 
 const authStore = useAuthStore();
-const orders = ref([]);
+const activeOrders = ref([]);
+const pastOrders = ref([]);
+const pastTotal = ref(0);
+const completedCount = ref(0);
 const loading = ref(true);
+const loadingMore = ref(false);
 const error = ref(null);
 const activeFilter = ref('all');
 
@@ -207,22 +211,13 @@ const filters = [
     { label: 'Runner', value: 'runner' },
 ];
 
+//show 'N' more value but is max 3 at a time
+const PAST_PAGE = 3;
+
 const isRequester = (order) => order.requester.id === authStore.user?.id;
 
-const filteredOrders = computed(() => {
-    if (activeFilter.value === 'requester') return orders.value.filter(isRequester);
-    if (activeFilter.value === 'runner') return orders.value.filter((o) => !isRequester(o));
-    return orders.value;
-});
-
-const activeOrders = computed(() =>
-    filteredOrders.value.filter((o) => o.status === 'open' || o.status === 'accepted')
-);
-const pastOrders = computed(() =>
-    filteredOrders.value.filter((o) => o.status === 'completed' || o.status === 'cancelled')
-);
 const activeCount = computed(() => activeOrders.value.length);
-const completedCount = computed(() => pastOrders.value.filter((o) => o.status === 'completed').length);
+const hasOrders = computed(() => activeOrders.value.length > 0 || pastOrders.value.length > 0);
 
 const emptyMessage = computed(() => {
     if (activeFilter.value === 'requester') return "Orders you've placed will appear here.";
@@ -230,15 +225,22 @@ const emptyMessage = computed(() => {
     return "Your past orders will show up here.";
 });
 
-const PAST_PAGE = 3;
-const pastLimit = ref(PAST_PAGE);
+const hasMorePast = computed(() => pastOrders.value.length < pastTotal.value);
+const remainingCount = computed(() => pastTotal.value - pastOrders.value.length);
 
-const visiblePastOrders = computed(() => pastOrders.value.slice(0, pastLimit.value));
-const hasMorePast = computed(() => pastOrders.value.length > pastLimit.value);
-const remainingCount = computed(() => pastOrders.value.length - pastLimit.value);
-
-function showMore() {
-    pastLimit.value += PAST_PAGE;
+async function showMore() {
+    if (loadingMore.value) return;
+    loadingMore.value = true;
+    try {
+        const { past } = await apiRequest.get(
+            `/requests/history?role=${activeFilter.value}&offset=${pastOrders.value.length}`
+        );
+        pastOrders.value.push(...(past ?? []));
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        loadingMore.value = false;
+    }
 }
 
 const groupedPastOrders = computed(() => {
@@ -248,7 +250,7 @@ const groupedPastOrders = computed(() => {
     yesterday.setDate(today.getDate() - 1);
 
     const groups = new Map();
-    for (const order of visiblePastOrders.value) {
+    for (const order of pastOrders.value) {
         const d = new Date(order.createdAt);
         const day = new Date(d);
         day.setHours(0, 0, 0, 0);
@@ -271,8 +273,13 @@ async function loadHistory() {
     loading.value = true;
     error.value = null;
     try {
-        const { requests } = await apiRequest.get('/requests/history');
-        orders.value = requests;
+        const { active, past, pastTotal: total, completedTotal } = await apiRequest.get(
+            `/requests/history?role=${activeFilter.value}&offset=0`
+        );
+        activeOrders.value = active ?? [];
+        pastOrders.value = past ?? [];
+        pastTotal.value = total ?? 0;
+        completedCount.value = completedTotal ?? 0;
     } catch (e) {
         error.value = e.message;
     } finally {
@@ -280,6 +287,7 @@ async function loadHistory() {
     }
 }
 
+watch(activeFilter, loadHistory);
 onMounted(loadHistory);
 </script>
 
