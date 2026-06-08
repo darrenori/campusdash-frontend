@@ -8,9 +8,13 @@
             <!-- Unexpanded Drawer -->
             <div class="drawer-header">
                 <div class="requester-block">
-                    <div class="pfp">
-                        <img v-if="resolvedPfpUrl" :src="resolvedPfpUrl" />
-                        <i v-else class="pi pi-user"></i>
+                    <div class="pfp-wrapper">
+                        <div class="pfp">
+                            <img v-if="resolvedPfpUrl" :src="resolvedPfpUrl" />
+                            <i v-else class="pi pi-user"></i>
+                        </div>
+
+                        <span v-if="showOnlineIndicator" class="online-dot" :class="{ offline: !runnerOnline }"></span>
                     </div>
 
                     <div class="requester-text">
@@ -36,8 +40,8 @@
 
             <!-- Expanded Drawer -->
             <div class="expanded-content">
-                <CancelPanel v-if="showCancelReason" class="cancel-panel" :needs-cancel-reason="needsCancelReason" :cancelling="cancelling"
-                    @cancel="cancelOrder" @close="closeCancelReason" />
+                <CancelPanel v-if="showCancelReason" class="cancel-panel" :needs-cancel-reason="needsCancelReason"
+                    :cancelling="cancelling" @cancel="cancelOrder" @close="closeCancelReason" />
 
                 <div v-else class="info-card">
                     <div class="info-row">
@@ -75,6 +79,19 @@
                         <div class="info-value">
                             {{ request.deliverer?.name }}
                             <i class="pi pi-copy copy-icon"></i>
+                        </div>
+                    </div>
+
+                    <div v-if="request.collectedAt" class="info-row">
+                        <div class="info-label">
+                            <span class="info-icon-bubble">
+                                <i class="pi pi-shopping-bag"></i>
+                            </span>
+                            <span>Picked Up</span>
+                        </div>
+
+                        <div class="info-value">
+                            {{ formatTime(request.collectedAt) }}
                         </div>
                     </div>
 
@@ -152,6 +169,10 @@ const props = defineProps({
         default: false
     },
     completing: {
+        type: Boolean,
+        default: false
+    },
+    runnerOnline: {
         type: Boolean,
         default: false
     }
@@ -247,6 +268,11 @@ function handleDeliveryAction() {
     }
 }
 
+// Online Status
+const showOnlineIndicator = computed(() => {
+    return hasRunner.value && !isDeliverer.value;
+});
+
 // Chat
 const showChat = computed(() => {
     return isAccepted.value || props.active;
@@ -307,6 +333,15 @@ function endDrag(event) {
     }
 
     dragStartY.value = null;
+}
+
+function formatTime(value) {
+    if (!value) return '';
+
+    return new Date(value).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 }
 </script>
 
@@ -377,6 +412,13 @@ function endDrag(event) {
     min-width: 0;
 }
 
+.pfp-wrapper {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+}
+
 .pfp {
     width: 48px;
     height: 48px;
@@ -395,6 +437,26 @@ function endDrag(event) {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.pfp {
+    position: relative;
+}
+
+.online-dot {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #16a34a;
+    border: 2px solid var(--drawer-text);
+    z-index: 2;
+}
+
+.online-dot.offline {
+    background: var(--drawer-bg);
 }
 
 .requester-name {
