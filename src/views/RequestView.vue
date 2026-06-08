@@ -383,7 +383,7 @@ async function submit() {
         joinOrderRoom(request);
         toast.add({
             severity: 'success',
-            summary: 'order submitted!',
+            summary: 'Order Submitted',
             life: 3000,
         });
     } catch (e) {

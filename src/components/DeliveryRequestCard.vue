@@ -341,21 +341,22 @@ const stallStyle = computed(() => {
 
 /* ── Own order status ───────────────────────── */
 .own-order-status {
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 11px 0;
+    gap: 5px;
+    padding: 7px 13px;
+    background: rgba(239, 124, 0, 0.1);
+    border: 1px solid rgba(239, 124, 0, 0.25);
+    border-radius: 20px;
     color: var(--color-accent);
-    font-size: 0.72rem;
-    font-weight: 800;
+    font-size: 0.68rem;
+    font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    width: 100%;
-    text-align: center;
+    white-space: nowrap;
 }
 
 .own-order-status i {
-    font-size: 1rem;
+    font-size: 0.75rem;
 }
 </style>

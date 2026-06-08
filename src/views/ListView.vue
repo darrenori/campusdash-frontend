@@ -22,7 +22,7 @@
                     <i class="pi pi-inbox"></i>
                 </div>
                 <h3 class="empty-title">Nothing available yet!</h3>
-                <p class="empty-sub">Check again later — new requests pop up here in real time.</p>
+                <p class="empty-sub">Check again later! New requests pop up here in real time.</p>
             </div>
 
             <DeliveryRequestCard v-for="request in filteredRequests" :key="request.id" :request="request"
