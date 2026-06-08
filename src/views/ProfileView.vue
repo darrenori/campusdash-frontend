@@ -18,9 +18,16 @@
                     <h2 class="username-title">
                         {{ userProfile.username }}
                     </h2>
-                    <div class="metadata-rows">
-                        <p class="meta-item">Member since: {{ userProfile.memberSince }}</p>
-                        <p class="meta-item">Deliveries Completed: {{ userProfile.deliveriesCount }}</p>
+                    <div class="stats-strip">
+                        <div class="stat-cell">
+                            <span class="stat-value">{{ userProfile.memberSince }}</span>
+                            <span class="stat-label">Member Since</span>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat-cell">
+                            <span class="stat-value">{{ userProfile.deliveriesCount }}</span>
+                            <span class="stat-label">Deliveries</span>
+                        </div>
                     </div>
 
                     <div class="badges-indicator">
@@ -112,9 +119,9 @@ const userProfile = computed(() => {
         username: userData?.username || 'Guest',
         email: userData?.email || '',
         memberSince: userData?.created_at
-            ? new Date(userData.created_at).toLocaleDateString('en-GB')
-            : '01-01-1970',
-        deliveriesCount: 0,
+            ? new Date(userData.created_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+            : 'Unknown',
+        deliveriesCount: Number(userData?.deliveries_completed ?? 0),
         numBadges: 0,
         pfpUrl: fullPfpPath,
         qrCodeUrl: fullQrPath
@@ -210,17 +217,45 @@ const userProfile = computed(() => {
     color: var(--theme-blue);
 }
 
-.metadata-rows {
+.stats-strip {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    margin-top: 12px;
+    background: var(--bg-surface);
+    border-radius: 18px;
+    padding: 12px 0;
+    width: 220px;
 }
 
-.meta-item {
-    margin: 0;
-    font-size: 0.85rem;
-    font-weight: 500;
+.stat-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+}
+
+.stat-label {
+    font-size: 0.6rem;
+    font-weight: 600;
     color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.stat-divider {
+    width: 1px;
+    height: 30px;
+    background: var(--divider-color);
+    flex-shrink: 0;
 }
 
 .badges-indicator {

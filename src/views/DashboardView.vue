@@ -167,6 +167,7 @@ function onCompleted({ id }) {
 
         if (wasDeliverer) {
             authStore.adjustPoints?.(1);
+            authStore.incrementDeliveries();
 
             toast.add({
                 severity: 'success',

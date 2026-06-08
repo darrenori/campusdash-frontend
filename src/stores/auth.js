@@ -43,5 +43,12 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    return { isAuthenticated, user, setLoggedIn, logout, adjustPoints, setPoints };
+    function incrementDeliveries() {
+        if (user.value != null) {
+            user.value = { ...user.value, deliveries_completed: Number(user.value.deliveries_completed ?? 0) + 1 };
+            localStorage.setItem('userData', JSON.stringify(user.value));
+        }
+    }
+
+    return { isAuthenticated, user, setLoggedIn, logout, adjustPoints, setPoints, incrementDeliveries };
 });
