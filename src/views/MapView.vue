@@ -1,7 +1,7 @@
 <template>
     <div class="map-view">
         <GoogleMap :key="themeStore.isDark ? 'dark-map' : 'light-map'" ref="mapRef" :api-key="apiKey" :map-id="mapId"
-            class="google-map" :center="mapCenter" :zoom="16" :disable-default-ui="true" :keyboard-shortcuts="false"
+            class="google-map" :center="mapCenter" :zoom="16" :disable-default-ui="true" :clickable-icons="false" :keyboard-shortcuts="false"
             :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'" @click="$emit('map-click')">
             <div v-if="!myRequest">
                 <AdvancedMarker v-for="request in requests" :key="request.id" :options="{

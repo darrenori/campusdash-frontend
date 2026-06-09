@@ -74,19 +74,25 @@
                         <p v-if="redirectingToMap">
                             Redirecting to Dashboard...
                         </p>
-                        <p>
-                            <template v-if="isDeliverer">
-                                {{ activeRequest.deliveryLocation }}
-                                <span v-if="activeRequest.collectedAt" class="runner-status online">Collected</span>
-                            </template>
-                            <template v-else-if="hasRunner">
-                                @{{ runnerName }}
-                                <span class="runner-status" :class="{ online: runnerOnline }">
-                                    {{ runnerOnline ? 'Online' : 'Offline' }}
-                                </span>
-                            </template>
-                            <template v-else>Finding you a nearby runner...</template>
+                        <p v-if="isDeliverer">
+                            {{ activeRequest.deliveryLocation }}
                         </p>
+
+                        <p v-else-if="hasRunner">
+                            @{{ runnerName }}
+                            <span class="runner-status" :class="{ online: runnerOnline }">
+                                {{ runnerOnline ? 'Online' : 'Offline' }}
+                            </span>
+                        </p>
+
+                        <p v-else>
+                            Finding you a nearby runner...
+                        </p>
+
+                        <div v-if="activeRequest.collectedAt" class="pickup-time-row">
+                            <i class="pi pi-shopping-bag"></i>
+                            <span>Order picked up at {{ formatTime(activeRequest.collectedAt) }}</span>
+                        </div>
                         <button v-if="hasRunner" type="button" class="complete-btn"
                             :disabled="completing || (isDeliverer && activeRequest.collectedAt)"
                             @click="isRequester ? completeOrder() : markCollected()">
@@ -327,6 +333,15 @@ function validateLocation() {
 
 function cleanRequestText(value) {
     return value.replace(/[<>\u0000-\u001F\u007F]/g, '').slice(0, 255);
+}
+
+function formatTime(value) {
+    if (!value) return '';
+
+    return new Date(value).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 }
 
 function validateRequestFields() {
@@ -971,6 +986,20 @@ onUnmounted(() => {
 
 .runner-status.online::before {
     background: #0e9f6e;
+}
+
+.pickup-time-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    color: var(--theme-blue);
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.pickup-time-row i {
+    font-size: 0.78rem;
 }
 
 .timeline-line {

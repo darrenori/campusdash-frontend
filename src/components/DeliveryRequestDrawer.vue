@@ -1,16 +1,21 @@
 <template>
     <Transition name="drawer-slide">
-        <section v-if="visible && request" class="delivery-drawer" :class="{ expanded: isExpanded }">
-            <button type="button" class="drawer-handle-area" @click="toggleExpanded" @pointerdown="startDrag">
+        <section v-if="visible && request" class="delivery-drawer"
+            :class="{ expanded: isExpanded, dragging: isDragging }" :style="drawerDragStyle">
+            <button type="button" class="drawer-handle-area" @pointerdown="startDrag">
                 <span class="drawer-handle"></span>
             </button>
 
             <!-- Unexpanded Drawer -->
             <div class="drawer-header">
                 <div class="requester-block">
-                    <div class="pfp">
-                        <img v-if="resolvedPfpUrl" :src="resolvedPfpUrl" />
-                        <i v-else class="pi pi-user"></i>
+                    <div class="pfp-wrapper">
+                        <div class="pfp">
+                            <img v-if="resolvedPfpUrl" :src="resolvedPfpUrl" />
+                            <i v-else class="pi pi-user"></i>
+                        </div>
+
+                        <span v-if="showOnlineIndicator" class="online-dot" :class="{ offline: !runnerOnline }"></span>
                     </div>
 
                     <div class="requester-text">
@@ -36,8 +41,8 @@
 
             <!-- Expanded Drawer -->
             <div class="expanded-content">
-                <CancelPanel v-if="showCancelReason" class="cancel-panel" :needs-cancel-reason="needsCancelReason" :cancelling="cancelling"
-                    @cancel="cancelOrder" @close="closeCancelReason" />
+                <CancelPanel v-if="showCancelReason" class="cancel-panel" :needs-cancel-reason="needsCancelReason"
+                    :cancelling="cancelling" @cancel="cancelOrder" @close="closeCancelReason" />
 
                 <div v-else class="info-card">
                     <div class="info-row">
@@ -47,10 +52,10 @@
                             </span>
                             <span>Order ID</span>
                         </div>
-                        <div class="info-value">
-                            {{ paddedOrderId }}
+                        <button type="button" class="info-value copy-value" @click="copyToClipboard(paddedOrderId)">
+                            {{ justCopied === paddedOrderId ? 'Copied!' : paddedOrderId }}
                             <i class="pi pi-copy copy-icon"></i>
-                        </div>
+                        </button>
                     </div>
 
                     <div class="info-row">
@@ -60,10 +65,11 @@
                             </span>
                             <span>Buyer</span>
                         </div>
-                        <div class="info-value">
-                            {{ request.requester?.name }}
+                        <button type="button" class="info-value copy-value"
+                            @click="copyToClipboard(request.requester?.name)">
+                            {{ justCopied === request.requester?.name ? 'Copied!' : request.requester?.name }}
                             <i class="pi pi-copy copy-icon"></i>
-                        </div>
+                        </button>
                     </div>
 
                     <div v-if="showRunner" class="info-row">
@@ -72,9 +78,23 @@
                                 <span class="svg-icon running-icon" aria-hidden="true"></span> </span>
                             <span>Runner</span>
                         </div>
-                        <div class="info-value">
-                            {{ request.deliverer?.name }}
+                        <button type="button" class="info-value copy-value"
+                            @click="copyToClipboard(request.deliverer?.name)">
+                            {{ justCopied === request.deliverer?.name ? 'Copied!' : request.deliverer?.name }}
                             <i class="pi pi-copy copy-icon"></i>
+                        </button>
+                    </div>
+
+                    <div v-if="request.collectedAt" class="info-row">
+                        <div class="info-label">
+                            <span class="info-icon-bubble">
+                                <i class="pi pi-shopping-bag"></i>
+                            </span>
+                            <span>Picked Up</span>
+                        </div>
+
+                        <div class="info-value">
+                            {{ formatTime(request.collectedAt) }}
                         </div>
                     </div>
 
@@ -124,7 +144,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
 const authStore = useAuthStore();
 
@@ -154,13 +174,14 @@ const props = defineProps({
     completing: {
         type: Boolean,
         default: false
+    },
+    runnerOnline: {
+        type: Boolean,
+        default: false
     }
 });
 
 const emit = defineEmits(['accept', 'cancel', 'complete', 'collected', 'chat']);
-
-const isExpanded = ref(false);
-const dragStartY = ref(null);
 
 const isAccepted = computed(() => props.request?.status === 'accepted');
 
@@ -169,10 +190,6 @@ const showAccept = computed(() => {
 });
 
 // Cancel Panel
-const showCancel = computed(() => {
-    return props.active || isAccepted.value;
-});
-
 const showCancelReason = ref(false);
 
 const needsCancelReason = computed(() => props.request?.status === 'accepted');
@@ -208,6 +225,7 @@ watch(
     () => {
         isExpanded.value = false;
         closeCancelReason();
+        justCopied.value = null;
     }
 );
 
@@ -247,6 +265,11 @@ function handleDeliveryAction() {
     }
 }
 
+// Online Status
+const showOnlineIndicator = computed(() => {
+    return hasRunner.value && !isDeliverer.value;
+});
+
 // Chat
 const showChat = computed(() => {
     return isAccepted.value || props.active;
@@ -266,10 +289,6 @@ const itemPreview = computed(() => {
     return props.request.item;
 });
 
-const requesterInitial = computed(() => {
-    return props.request?.requester?.name?.charAt(0)?.toUpperCase() || '?';
-});
-
 const resolvedPfpUrl = computed(() => {
     const rawUrl = props.request?.requester?.pfpUrl;
     if (!rawUrl) return null;
@@ -283,30 +302,121 @@ const resolvedPfpUrl = computed(() => {
     return `${fileServerUrl}${rawUrl}`;
 });
 
-function toggleExpanded() {
-    isExpanded.value = !isExpanded.value;
+// Drawer Drag
+const isExpanded = ref(false);
+const dragStartY = ref(null);
+const dragStartHeight = ref(null);
+const dragHeight = ref(null);
+const didDrag = ref(false);
+const isDragging = ref(false);
+
+const drawerDragStyle = computed(() => {
+    if (dragHeight.value === null) return {};
+
+    return {
+        maxHeight: `${dragHeight.value}px`,
+        transition: 'none'
+    };
+});
+
+const COLLAPSED_DRAWER_HEIGHT = 105;
+const EXPANDED_DRAWER_HEIGHT = 600;
+
+function getExpandedDrawerHeight() {
+    return window.innerWidth <= 600
+        ? window.innerHeight - 90
+        : EXPANDED_DRAWER_HEIGHT;
+}
+
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
 }
 
 function startDrag(event) {
     dragStartY.value = event.clientY;
+    dragStartHeight.value = isExpanded.value
+        ? getExpandedDrawerHeight()
+        : COLLAPSED_DRAWER_HEIGHT;
 
+    didDrag.value = false;
+    isDragging.value = true;
+
+    window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag, { once: true });
 }
 
-function endDrag(event) {
-    if (dragStartY.value === null) return;
+function onDrag(event) {
+    if (dragStartY.value === null || dragStartHeight.value === null) return;
 
-    const deltaY = event.clientY - dragStartY.value;
+    const deltaY = dragStartY.value - event.clientY;
 
-    if (deltaY < -24) {
-        isExpanded.value = true;
+    if (Math.abs(deltaY) > 4) {
+        didDrag.value = true;
     }
 
-    if (deltaY > 24) {
-        isExpanded.value = false;
+    dragHeight.value = clamp(
+        dragStartHeight.value + deltaY,
+        COLLAPSED_DRAWER_HEIGHT,
+        getExpandedDrawerHeight()
+    );
+}
+
+function endDrag(event) {
+    window.removeEventListener('pointermove', onDrag);
+
+    if (dragStartY.value !== null) {
+        const dragDistance = dragStartY.value - event.clientY;
+
+        if (!didDrag.value) {
+            isExpanded.value = !isExpanded.value;
+        } else if (dragDistance > 40) {
+            isExpanded.value = true;
+        } else if (dragDistance < -40) {
+            isExpanded.value = false;
+        }
     }
 
     dragStartY.value = null;
+    dragStartHeight.value = null;
+    dragHeight.value = null;
+    didDrag.value = false;
+    isDragging.value = false;
+}
+
+onBeforeUnmount(() => {
+    window.removeEventListener('pointermove', onDrag);
+});
+
+function formatTime(value) {
+    if (!value) return '';
+
+    return new Date(value).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+// Copy Button
+const justCopied = ref(null);
+
+async function copyToClipboard(value) {
+    if (!value) return;
+
+    const text = String(value);
+
+    try {
+        await navigator.clipboard.writeText(text);
+
+        justCopied.value = text;
+
+        setTimeout(() => {
+            if (justCopied.value === text) {
+                justCopied.value = null;
+            }
+        }, 2000);
+    } catch {
+        console.log("Failed to copy to clipboard:", text);
+    }
 }
 </script>
 
@@ -327,7 +437,14 @@ function endDrag(event) {
 }
 
 .delivery-drawer.expanded {
-    max-height: calc(100dvh - 80px);
+    max-height: 600px;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+    .delivery-drawer.expanded {
+        max-height: calc(100dvh - 90px);
+    }
 }
 
 .expanded-content {
@@ -337,7 +454,8 @@ function endDrag(event) {
     transition: opacity 0.15s ease-out;
 }
 
-.delivery-drawer.expanded .expanded-content {
+.delivery-drawer.expanded .expanded-content,
+.delivery-drawer.dragging .expanded-content {
     opacity: 1;
     pointer-events: auto;
 }
@@ -377,7 +495,15 @@ function endDrag(event) {
     min-width: 0;
 }
 
+.pfp-wrapper {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+}
+
 .pfp {
+    position: relative;
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -395,6 +521,22 @@ function endDrag(event) {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.online-dot {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #16a34a;
+    border: 2px solid var(--drawer-text);
+    z-index: 2;
+}
+
+.online-dot.offline {
+    background: var(--drawer-bg);
 }
 
 .requester-name {
@@ -530,8 +672,22 @@ function endDrag(event) {
     text-align: right;
 }
 
+.copy-value {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.copy-value:hover .copy-icon {
+    opacity: 1;
+}
+
 .copy-icon {
     font-size: 0.65rem;
+    opacity: 0.7;
 }
 
 .items-section {

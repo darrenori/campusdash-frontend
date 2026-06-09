@@ -271,7 +271,7 @@ const stallStyle = computed(() => {
 }
 
 .pin.dest {
-    color: var(--color-primary);
+    color: var(--theme-blue);
 }
 
 .dotline {
@@ -306,7 +306,7 @@ const stallStyle = computed(() => {
 .item-text {
     font-size: 0.9rem;
     font-weight: 700;
-    color: var(--color-primary);
+    color: var(--theme-blue);
     text-align: right;
     line-height: 1.32;
     white-space: pre-line;

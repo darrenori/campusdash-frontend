@@ -26,8 +26,8 @@
 
         <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest" :active="!!myRequest"
             :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" :cancelling="cancelling"
-            :completing="completing" @accept="acceptRequest" @cancel="handleDrawerCancel" @complete="completeOrder"
-            @collected="markCollected" @chat="openChat" />
+            :completing="completing" :runner-online="runnerOnline" @accept="acceptRequest" @cancel="handleDrawerCancel"
+            @complete="completeOrder" @collected="markCollected" @chat="openChat" />
 
         <BottomNav />
 
@@ -197,6 +197,7 @@ function onCollected({ id, request }) {
     }
 }
 
+// Online Status
 function onPresenceSnapshot({ onlineUserIds: ids = [] }) {
     onlineUserIds.value = new Set(ids.map(Number));
 }
@@ -211,6 +212,13 @@ function onPresenceUpdate({ userId, online }) {
     }
     onlineUserIds.value = next;
 }
+
+const runnerOnline = computed(() => {
+    const delivererId = drawerRequest.value?.deliverer?.id;
+    if (!delivererId) return false;
+
+    return onlineUserIds.value.has(Number(delivererId));
+});
 
 // Actions
 const completing = ref(false);
