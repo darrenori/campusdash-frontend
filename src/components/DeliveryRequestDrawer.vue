@@ -1,7 +1,8 @@
 <template>
     <Transition name="drawer-slide">
-        <section v-if="visible && request" class="delivery-drawer" :class="{ expanded: isExpanded }">
-            <button type="button" class="drawer-handle-area" @click="toggleExpanded" @pointerdown="startDrag">
+        <section v-if="visible && request" class="delivery-drawer"
+            :class="{ expanded: isExpanded, dragging: isDragging }" :style="drawerDragStyle">
+            <button type="button" class="drawer-handle-area" @pointerdown="startDrag">
                 <span class="drawer-handle"></span>
             </button>
 
@@ -143,7 +144,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
 const authStore = useAuthStore();
 
@@ -182,9 +183,6 @@ const props = defineProps({
 
 const emit = defineEmits(['accept', 'cancel', 'complete', 'collected', 'chat']);
 
-const isExpanded = ref(false);
-const dragStartY = ref(null);
-
 const isAccepted = computed(() => props.request?.status === 'accepted');
 
 const showAccept = computed(() => {
@@ -192,10 +190,6 @@ const showAccept = computed(() => {
 });
 
 // Cancel Panel
-const showCancel = computed(() => {
-    return props.active || isAccepted.value;
-});
-
 const showCancelReason = ref(false);
 
 const needsCancelReason = computed(() => props.request?.status === 'accepted');
@@ -231,6 +225,7 @@ watch(
     () => {
         isExpanded.value = false;
         closeCancelReason();
+        justCopied.value = null;
     }
 );
 
@@ -294,10 +289,6 @@ const itemPreview = computed(() => {
     return props.request.item;
 });
 
-const requesterInitial = computed(() => {
-    return props.request?.requester?.name?.charAt(0)?.toUpperCase() || '?';
-});
-
 const resolvedPfpUrl = computed(() => {
     const rawUrl = props.request?.requester?.pfpUrl;
     if (!rawUrl) return null;
@@ -311,31 +302,90 @@ const resolvedPfpUrl = computed(() => {
     return `${fileServerUrl}${rawUrl}`;
 });
 
-function toggleExpanded() {
-    isExpanded.value = !isExpanded.value;
+// Drawer Drag
+const isExpanded = ref(false);
+const dragStartY = ref(null);
+const dragStartHeight = ref(null);
+const dragHeight = ref(null);
+const didDrag = ref(false);
+const isDragging = ref(false);
+
+const drawerDragStyle = computed(() => {
+    if (dragHeight.value === null) return {};
+
+    return {
+        maxHeight: `${dragHeight.value}px`,
+        transition: 'none'
+    };
+});
+
+const COLLAPSED_DRAWER_HEIGHT = 105;
+const EXPANDED_DRAWER_HEIGHT = 600;
+
+function getExpandedDrawerHeight() {
+    return window.innerWidth <= 600
+        ? window.innerHeight - 90
+        : EXPANDED_DRAWER_HEIGHT;
+}
+
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
 }
 
 function startDrag(event) {
     dragStartY.value = event.clientY;
+    dragStartHeight.value = isExpanded.value
+        ? getExpandedDrawerHeight()
+        : COLLAPSED_DRAWER_HEIGHT;
 
+    didDrag.value = false;
+    isDragging.value = true;
+
+    window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag, { once: true });
 }
 
-function endDrag(event) {
-    if (dragStartY.value === null) return;
+function onDrag(event) {
+    if (dragStartY.value === null || dragStartHeight.value === null) return;
 
-    const deltaY = event.clientY - dragStartY.value;
+    const deltaY = dragStartY.value - event.clientY;
 
-    if (deltaY < -24) {
-        isExpanded.value = true;
+    if (Math.abs(deltaY) > 4) {
+        didDrag.value = true;
     }
 
-    if (deltaY > 24) {
-        isExpanded.value = false;
+    dragHeight.value = clamp(
+        dragStartHeight.value + deltaY,
+        COLLAPSED_DRAWER_HEIGHT,
+        getExpandedDrawerHeight()
+    );
+}
+
+function endDrag(event) {
+    window.removeEventListener('pointermove', onDrag);
+
+    if (dragStartY.value !== null) {
+        const dragDistance = dragStartY.value - event.clientY;
+
+        if (!didDrag.value) {
+            isExpanded.value = !isExpanded.value;
+        } else if (dragDistance > 40) {
+            isExpanded.value = true;
+        } else if (dragDistance < -40) {
+            isExpanded.value = false;
+        }
     }
 
     dragStartY.value = null;
+    dragStartHeight.value = null;
+    dragHeight.value = null;
+    didDrag.value = false;
+    isDragging.value = false;
 }
+
+onBeforeUnmount(() => {
+    window.removeEventListener('pointermove', onDrag);
+});
 
 function formatTime(value) {
     if (!value) return '';
@@ -352,16 +402,20 @@ const justCopied = ref(null);
 async function copyToClipboard(value) {
     if (!value) return;
 
-    try {
-        await navigator.clipboard.writeText(String(value));
+    const text = String(value);
 
-        justCopied.value = value;
+    try {
+        await navigator.clipboard.writeText(text);
+
+        justCopied.value = text;
 
         setTimeout(() => {
-            justCopied.value = null;
+            if (justCopied.value === text) {
+                justCopied.value = null;
+            }
         }, 2000);
     } catch {
-        console.log("Failed to copy to clipboard:", value);
+        console.log("Failed to copy to clipboard:", text);
     }
 }
 </script>
@@ -383,7 +437,14 @@ async function copyToClipboard(value) {
 }
 
 .delivery-drawer.expanded {
-    max-height: calc(100dvh - 80px);
+    max-height: 600px;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+    .delivery-drawer.expanded {
+        max-height: calc(100dvh - 90px);
+    }
 }
 
 .expanded-content {
@@ -393,7 +454,8 @@ async function copyToClipboard(value) {
     transition: opacity 0.15s ease-out;
 }
 
-.delivery-drawer.expanded .expanded-content {
+.delivery-drawer.expanded .expanded-content,
+.delivery-drawer.dragging .expanded-content {
     opacity: 1;
     pointer-events: auto;
 }
@@ -441,6 +503,7 @@ async function copyToClipboard(value) {
 }
 
 .pfp {
+    position: relative;
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -458,10 +521,6 @@ async function copyToClipboard(value) {
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.pfp {
-    position: relative;
 }
 
 .online-dot {
