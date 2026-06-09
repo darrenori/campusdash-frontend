@@ -51,10 +51,10 @@
                             </span>
                             <span>Order ID</span>
                         </div>
-                        <div class="info-value">
+                        <button type="button" class="info-value copy-value" @click="copyToClipboard(paddedOrderId)">
                             {{ paddedOrderId }}
                             <i class="pi pi-copy copy-icon"></i>
-                        </div>
+                        </button>
                     </div>
 
                     <div class="info-row">
@@ -64,10 +64,11 @@
                             </span>
                             <span>Buyer</span>
                         </div>
-                        <div class="info-value">
-                            {{ request.requester?.name }}
+                        <button type="button" class="info-value copy-value"
+                            @click="copyToClipboard(request.deliverer?.name)">
+                            {{ request.deliverer?.name }}
                             <i class="pi pi-copy copy-icon"></i>
-                        </div>
+                        </button>
                     </div>
 
                     <div v-if="showRunner" class="info-row">
@@ -76,10 +77,11 @@
                                 <span class="svg-icon running-icon" aria-hidden="true"></span> </span>
                             <span>Runner</span>
                         </div>
-                        <div class="info-value">
+                        <button type="button" class="info-value copy-value"
+                            @click="copyToClipboard(request.deliverer?.name)">
                             {{ request.deliverer?.name }}
                             <i class="pi pi-copy copy-icon"></i>
-                        </div>
+                        </button>
                     </div>
 
                     <div v-if="request.collectedAt" class="info-row">
@@ -343,6 +345,19 @@ function formatTime(value) {
         minute: '2-digit',
     });
 }
+
+// Copy Button
+async function copyToClipboard(value) {
+    if (!value) return;
+
+    const text = String(value);
+
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        console.log("Failed to copy to clipboard:", text);
+    }
+}
 </script>
 
 <style scoped>
@@ -592,8 +607,22 @@ function formatTime(value) {
     text-align: right;
 }
 
+.copy-value {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.copy-value:hover .copy-icon {
+    opacity: 1;
+}
+
 .copy-icon {
     font-size: 0.65rem;
+    opacity: 0.7;
 }
 
 .items-section {
