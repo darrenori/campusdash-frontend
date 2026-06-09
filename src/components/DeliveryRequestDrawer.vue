@@ -65,8 +65,8 @@
                             <span>Buyer</span>
                         </div>
                         <button type="button" class="info-value copy-value"
-                            @click="copyToClipboard(request.deliverer?.name)">
-                            {{ request.deliverer?.name }}
+                            @click="copyToClipboard(request.requester?.name)">
+                            {{ request.requester?.name }}
                             <i class="pi pi-copy copy-icon"></i>
                         </button>
                     </div>
