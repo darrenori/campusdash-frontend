@@ -52,7 +52,7 @@
                             <span>Order ID</span>
                         </div>
                         <button type="button" class="info-value copy-value" @click="copyToClipboard(paddedOrderId)">
-                            {{ paddedOrderId }}
+                            {{ justCopied === paddedOrderId ? 'Copied!' : paddedOrderId }}
                             <i class="pi pi-copy copy-icon"></i>
                         </button>
                     </div>
@@ -66,7 +66,7 @@
                         </div>
                         <button type="button" class="info-value copy-value"
                             @click="copyToClipboard(request.requester?.name)">
-                            {{ request.requester?.name }}
+                            {{ justCopied === request.requester?.name ? 'Copied!' : request.requester?.name }}
                             <i class="pi pi-copy copy-icon"></i>
                         </button>
                     </div>
@@ -79,7 +79,7 @@
                         </div>
                         <button type="button" class="info-value copy-value"
                             @click="copyToClipboard(request.deliverer?.name)">
-                            {{ request.deliverer?.name }}
+                            {{ justCopied === request.deliverer?.name ? 'Copied!' : request.deliverer?.name }}
                             <i class="pi pi-copy copy-icon"></i>
                         </button>
                     </div>
@@ -347,15 +347,21 @@ function formatTime(value) {
 }
 
 // Copy Button
+const justCopied = ref(null);
+
 async function copyToClipboard(value) {
     if (!value) return;
 
-    const text = String(value);
-
     try {
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(String(value));
+
+        justCopied.value = value;
+
+        setTimeout(() => {
+            justCopied.value = null;
+        }, 2000);
     } catch {
-        console.log("Failed to copy to clipboard:", text);
+        console.log("Failed to copy to clipboard:", value);
     }
 }
 </script>
