@@ -6,12 +6,27 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useThemeStore } from './stores/theme';
+import { useAuthStore } from './stores/auth';
+import { useMessagesStore } from './stores/messages';
 
 import Toast from 'primevue/toast';
 
 const themeStore = useThemeStore();
+const authStore = useAuthStore();
+const messagesStore = useMessagesStore();
+
+// Keep the realtime messages store bound while authenticated so the unread
+// badge stays live everywhere; reset it on logout.
+watch(
+  () => authStore.isAuthenticated,
+  (authed) => {
+    if (authed) messagesStore.init();
+    else messagesStore.reset();
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   themeStore.initTheme();

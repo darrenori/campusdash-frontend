@@ -18,7 +18,14 @@
     </div>
 
     <router-link to="/messages" class="nav-item">
-      <span class="icon"><i class="pi pi-comments"></i></span>
+      <span class="icon">
+        <i class="pi pi-comments"></i>
+        <span
+          v-if="messagesStore.totalUnread > 0"
+          class="nav-badge"
+          :aria-label="`${messagesStore.totalUnread} unread messages`"
+        >{{ messagesStore.totalUnread > 99 ? '99+' : messagesStore.totalUnread }}</span>
+      </span>
       <span class="label">Messages</span>
     </router-link>
 
@@ -34,9 +41,11 @@ import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useRequestStore } from '../stores/requests';
+import { useMessagesStore } from '../stores/messages';
 
 const authStore = useAuthStore();
 const requestStore = useRequestStore();
+const messagesStore = useMessagesStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -93,6 +102,25 @@ function goDiscover() {
 .icon {
   font-size: 1.4rem;
   margin-bottom: 2px;
+  position: relative;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(40%);
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 .label {
