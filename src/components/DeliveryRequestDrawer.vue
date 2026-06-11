@@ -133,7 +133,7 @@
                     {{ deliveryActionText }}
                 </button>
 
-                <button v-if="!showAccept && canCancelOrder" type="button" class="cancel-button" :disabled="cancelling"
+                <button v-if="!showAccept && canCancelOrder" type="button" class="cancel-btn" :disabled="cancelling"
                     @click="openCancelReason">
                     {{ cancelling ? 'CANCELLING...' : 'CANCEL' }}
                     <span v-if="needsCancelReason">(-1 PT)</span>
@@ -571,7 +571,7 @@ async function copyToClipboard(value) {
     cursor: not-allowed;
 }
 
-.cancel-button {
+.cancel-btn {
     margin-top: 10px;
 }
 
@@ -722,7 +722,7 @@ async function copyToClipboard(value) {
 }
 
 .accept-btn,
-.cancel-button {
+.cancel-btn {
     width: 100%;
     border: none;
     border-radius: 4px;
@@ -743,11 +743,11 @@ async function copyToClipboard(value) {
     cursor: not-allowed;
 }
 
-.cancel-button {
+.cancel-btn {
     background: var(--color-danger);
 }
 
-.cancel-button span {
+.cancel-btn span {
     font-size: 0.9rem;
     font-weight: 600;
 }
