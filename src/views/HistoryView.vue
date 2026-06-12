@@ -211,8 +211,8 @@ const filters = [
     { label: 'Runner', value: 'runner' },
 ];
 
-//show 'N' more value but is max 3 at a time
-const PAST_PAGE = 3;
+//load 10 per page, label shows the real count when fewer than 10 remain
+const PAST_PAGE = 10;
 
 const isRequester = (order) => order.requester.id === authStore.user?.id;
 
