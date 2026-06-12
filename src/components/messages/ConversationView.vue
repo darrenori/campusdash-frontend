@@ -685,6 +685,13 @@ onMounted(scrollToBottom);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    /* Keep it scrollable but hide the scrollbar chrome */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.message-scroll::-webkit-scrollbar {
+    display: none;
 }
 
 /* Bubbles flush to the pane edges (sender right, receiver left). The order and
