@@ -1,7 +1,8 @@
 import { io } from 'socket.io-client';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api');
-const SOCKET_URL = BACKEND_URL.replace(/\/api\/?$/, '');
+const normalizeBaseUrl = (url) => url.replace(/\/+$/, '');
+const BACKEND_URL = normalizeBaseUrl(import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api'));
+const SOCKET_URL = normalizeBaseUrl(import.meta.env.VITE_SOCKET_URL || BACKEND_URL.replace(/\/api$/, ''));
 
 let socket;
 

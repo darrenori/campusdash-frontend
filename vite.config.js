@@ -10,8 +10,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       vue(),
-      basicSsl(),
-    ],
+      mode === 'development' ? basicSsl() : null,
+    ].filter(Boolean),
 
     server: {
       host: '0.0.0.0',

@@ -1,7 +1,8 @@
 import { useAuthStore } from "../stores/auth";
 import router from "../router";
 
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api');
+const normalizeBaseUrl = (url) => url.replace(/\/+$/, '');
+const BASE_URL = normalizeBaseUrl(import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api'));
 
 const parseJsonResponse = async (response) => {
     const body = await response.text();
@@ -102,9 +103,9 @@ export const apiRequest = {
             throw new Error('Session expired. Please log in again.');
         }
 
-        const result = await response.json();
+        const result = await parseJsonResponse(response);
         if (!response.ok) {
-            throw new Error(result.error || 'API request failed');
+            throw new Error(result?.error || `API request failed (${response.status})`);
         }
 
         return result;
@@ -147,9 +148,9 @@ export const apiRequest = {
             throw new Error('Session expired. Please log in again.');
         }
 
-        const result = await response.json();
+        const result = await parseJsonResponse(response);
         if (!response.ok) {
-            throw new Error(result.error || 'API request failed');
+            throw new Error(result?.error || `API request failed (${response.status})`);
         }
 
         return result;

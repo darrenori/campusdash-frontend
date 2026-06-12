@@ -139,6 +139,7 @@ describe('apiRequest', () => {
       global.fetch.mockResolvedValue({
         status: 200,
         ok: true,
+        text: jest.fn().mockResolvedValue(JSON.stringify({ replaced: true })),
         json: jest.fn().mockResolvedValue({ replaced: true }),
       });
       await apiRequest.put('/resource/1', { name: 'Carol' });
@@ -158,6 +159,7 @@ describe('apiRequest', () => {
       global.fetch.mockResolvedValue({
         status: 200,
         ok: true,
+        text: jest.fn().mockResolvedValue(JSON.stringify({ uploaded: true })),
         json: jest.fn().mockResolvedValue({ uploaded: true }),
       });
       const fd = new FormData();
