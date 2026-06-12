@@ -54,7 +54,9 @@ const router = createRouter({
         },
         {
             path: '/messages',
-            redirect: '/'
+            name: 'messages',
+            component: () => import('../views/MessagesView.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/:pathMatch(.*)*',

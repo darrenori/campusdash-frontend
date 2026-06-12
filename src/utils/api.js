@@ -110,6 +110,27 @@ export const apiRequest = {
         return result;
     },
 
+    async delete(endpoint) {
+        const response = await fetch(`${BASE_URL}${endpoint}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (response.status === 401) {
+            const authStore = useAuthStore();
+            await authStore.logout();
+            router.push('/login');
+            throw new Error('Session expired. Please log in again.');
+        }
+
+        const result = await parseJsonResponse(response);
+        if (!response.ok) {
+            throw new Error(result?.error || `API request failed (${response.status})`);
+        }
+
+        return result;
+    },
+
     async put(endpoint, data, config = { autoLogout: true }) {
         const response = await fetch(`${BASE_URL}${endpoint}`, {
             method: 'PUT',

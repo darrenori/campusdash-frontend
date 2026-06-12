@@ -50,10 +50,12 @@ import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
 import { useAuthStore } from '../stores/auth';
 import { useRequestStore } from '../stores/requests';
+import { useMessagesStore } from '../stores/messages';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const requestStore = useRequestStore();
+const messagesStore = useMessagesStore();
 
 const viewMode = ref('map');
 
@@ -346,8 +348,29 @@ async function handleDrawerCancel(payload) {
     }
 }
 
-function openChat(request) {
-    console.log("CHAT ", request);
+const openingChat = ref(false);
+
+async function openChat(request) {
+    if (!request || openingChat.value) return;
+
+    // The other participant is whoever I am not on this order.
+    const iAmRequester = isCurrentUser(request.requester?.id);
+    const other = iAmRequester ? request.deliverer : request.requester;
+    if (!other?.id) {
+        toast.add({ severity: 'info', summary: 'Chat unavailable', detail: 'Waiting for a runner to accept this order.', life: 3000 });
+        return;
+    }
+
+    openingChat.value = true;
+    try {
+        const conversation = await messagesStore.startConversation(other.id, request.id);
+        await router.push('/messages');
+        messagesStore.openConversation(conversation.id);
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Could not open chat', detail: e.message, life: 4000 });
+    } finally {
+        openingChat.value = false;
+    }
 }
 
 onMounted(() => {

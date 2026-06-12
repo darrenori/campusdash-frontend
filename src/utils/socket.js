@@ -13,3 +13,12 @@ export function getSocket() {
     }
     return socket;
 }
+
+// Tear down the socket on logout / session expiry so no authenticated
+// connection lingers. The next getSocket() call creates a fresh one.
+export function disconnectSocket() {
+    if (socket) {
+        socket.disconnect();
+        socket = undefined;
+    }
+}
