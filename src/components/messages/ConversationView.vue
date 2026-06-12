@@ -74,12 +74,12 @@
                 <template v-for="seg in segments" :key="seg.key">
                     <!-- Messages before any order share no header -->
                     <template v-if="!seg.order">
-                        <MessageBubble
-                            v-for="m in seg.messages"
-                            :key="m.id"
-                            :message="m"
-                            :mine="m.sender.id === myId"
-                        />
+                        <template v-for="m in seg.messages" :key="m.id">
+                            <div v-if="dayDividers[m.id]" class="day-divider">
+                                <span>{{ dayDividers[m.id] }}</span>
+                            </div>
+                            <MessageBubble :message="m" :mine="m.sender.id === myId" />
+                        </template>
                     </template>
 
                     <!-- One collapsible order segment -->
@@ -118,12 +118,12 @@
                                 {{ acceptedBy(seg.order) }} accepted this order · {{ clock(seg.order.acceptedAt) }}
                             </div>
 
-                            <MessageBubble
-                                v-for="m in seg.messages"
-                                :key="m.id"
-                                :message="m"
-                                :mine="m.sender.id === myId"
-                            />
+                            <template v-for="m in seg.messages" :key="m.id">
+                                <div v-if="dayDividers[m.id]" class="day-divider">
+                                    <span>{{ dayDividers[m.id] }}</span>
+                                </div>
+                                <MessageBubble :message="m" :mine="m.sender.id === myId" />
+                            </template>
 
                             <div v-if="seg.order.status === 'completed'" class="sys-event">
                                 Order completed<template v-if="seg.order.deliveredAt"> · {{ clock(seg.order.deliveredAt) }}</template><template v-if="pointsText(seg.order)"> · {{ pointsText(seg.order) }}</template>
@@ -143,7 +143,11 @@
           </div>
         </div>
 
-        <MessageComposer :conversation-id="conversationId" :disabled="connectionState === 'disconnected'" />
+        <MessageComposer
+            :conversation-id="conversationId"
+            :disabled="connectionState === 'disconnected'"
+            :peer="otherUser"
+        />
 
         <OrderDetailsSheet
             v-if="selectedOrder"
@@ -358,6 +362,34 @@ function clock(iso) {
     if (Number.isNaN(d.getTime())) return '';
     return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(/\s/g, '').toLowerCase();
 }
+
+//today / yesterday / weekday if within a week, otherwise the date
+function dayLabel(d) {
+    const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    const today = new Date();
+    const diffDays = Math.round((startOfDay(today) - startOfDay(d)) / 86400000);
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'long' });
+    const sameYear = d.getFullYear() === today.getFullYear();
+    return d.toLocaleDateString([], { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) });
+}
+
+//first message of each day gets a label, even across order segments
+const dayDividers = computed(() => {
+    const map = {};
+    let prevKey = null;
+    for (const m of thread.value?.items || []) {
+        const d = new Date(m.createdAt);
+        if (Number.isNaN(d.getTime())) continue;
+        const key = d.toDateString();
+        if (key !== prevKey) {
+            map[m.id] = dayLabel(d);
+            prevKey = key;
+        }
+    }
+    return map;
+});
 
 // ---- scroll handling ------------------------------------------------------
 const scrollEl = ref(null);
@@ -681,6 +713,13 @@ onMounted(scrollToBottom);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    /* scrollable but no visible scrollbar */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.message-scroll::-webkit-scrollbar {
+    display: none;
 }
 
 /* Bubbles flush to the pane edges (sender right, receiver left). The order and
@@ -836,6 +875,24 @@ onMounted(scrollToBottom);
     font-size: 0.78rem;
     font-weight: 700;
     padding: 4px 2px;
+}
+
+/* day separators */
+.day-divider {
+    display: flex;
+    justify-content: center;
+    margin: 16px 0 8px;
+}
+
+.day-divider span {
+    background: var(--bg-input);
+    color: var(--text-muted);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 4px 12px;
+    border-radius: 14px;
 }
 
 /* System events */
