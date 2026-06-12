@@ -363,8 +363,7 @@ function clock(iso) {
     return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(/\s/g, '').toLowerCase();
 }
 
-// Relative day label: Today / Yesterday / weekday within the last week, then a
-// full date (year only shown when it differs from the current one).
+//today / yesterday / weekday if within a week, otherwise the date
 function dayLabel(d) {
     const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
     const today = new Date();
@@ -376,8 +375,7 @@ function dayLabel(d) {
     return d.toLocaleDateString([], { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) });
 }
 
-// Maps each message id that opens a new calendar day to its divider label, so
-// the timeline shows one separator per day regardless of order segments.
+//first message of each day gets a label, even across order segments
 const dayDividers = computed(() => {
     const map = {};
     let prevKey = null;
@@ -715,7 +713,7 @@ onMounted(scrollToBottom);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    /* Keep it scrollable but hide the scrollbar chrome */
+    /* scrollable but no visible scrollbar */
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -879,7 +877,7 @@ onMounted(scrollToBottom);
     padding: 4px 2px;
 }
 
-/* Day separators */
+/* day separators */
 .day-divider {
     display: flex;
     justify-content: center;

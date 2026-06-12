@@ -81,7 +81,7 @@ describe('MessageComposer.vue', () => {
         });
     });
 
-    //paynow qr overlay — shows the OTHER participant's QR so you can pay them
+    //paynow qr overlay, shows the OTHER participant's qr so you can pay them
     describe('PayNow QR button', () => {
         const peerWithQr = { id: 2, name: 'Bob', paynowQrUrl: '/uploads/qr.png' };
         const peerNoQr = { id: 2, name: 'Bob', paynowQrUrl: null };

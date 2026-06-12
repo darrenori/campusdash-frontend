@@ -69,7 +69,7 @@
             </button>
         </div>
 
-        <!-- Apple-style payment sheet showing the recipient's PayNow QR. -->
+        <!-- their paynow qr so you can pay them -->
         <Transition name="qr-sheet">
             <div v-if="qrOpen" class="qr-overlay" @click.self="qrOpen = false">
                 <div class="qr-card" role="dialog" aria-modal="true" :aria-label="`${peerName}'s PayNow QR code`">
@@ -101,7 +101,7 @@ import { resolveFileUrl } from '../../utils/fileUrl';
 const props = defineProps({
     conversationId: { type: Number, required: true },
     disabled: { type: Boolean, default: false },
-    // The other participant — used to surface their PayNow QR for payment.
+    //the person we're chatting with, so we can show their paynow qr
     peer: { type: Object, default: null },
 });
 
@@ -322,8 +322,7 @@ onBeforeUnmount(clearPending);
     cursor: not-allowed;
 }
 
-/* PayNow payment sheet — modelled on iOS sheets: dimmed + blurred backdrop,
-   continuous-rounded card, clear hierarchy, single primary action. */
+/* paynow sheet, ios-ish: dimmed + blurred backdrop, rounded card */
 .qr-overlay {
     position: fixed;
     inset: 0;
@@ -442,7 +441,7 @@ onBeforeUnmount(clearPending);
     box-shadow: 0 0 0 3px rgba(0, 101, 201, 0.3);
 }
 
-/* Spring-like present, quick dismiss — the iOS modal feel */
+/* springy in, quick out */
 .qr-sheet-enter-active {
     transition: opacity 0.25s ease;
 }
@@ -487,7 +486,7 @@ onBeforeUnmount(clearPending);
     line-height: 1.4;
     max-height: 120px;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    /* Scrolls past max-height but never shows a scrollbar inside the rounded pill */
+    /* still scrolls past max-height, just no visible bar */
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
