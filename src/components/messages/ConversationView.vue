@@ -143,7 +143,11 @@
           </div>
         </div>
 
-        <MessageComposer :conversation-id="conversationId" :disabled="connectionState === 'disconnected'" />
+        <MessageComposer
+            :conversation-id="conversationId"
+            :disabled="connectionState === 'disconnected'"
+            :peer="otherUser"
+        />
 
         <OrderDetailsSheet
             v-if="selectedOrder"
