@@ -301,6 +301,7 @@ onMounted(loadHistory);
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
 }
 
 /* ═══════════════════════════════════════════

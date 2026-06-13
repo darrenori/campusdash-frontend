@@ -711,6 +711,7 @@ onMounted(scrollToBottom);
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
     /* scrollable but no visible scrollbar */
