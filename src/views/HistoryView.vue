@@ -47,7 +47,7 @@
         </div>
 
         <!-- Error -->
-        <div v-else-if="error" class="center-state">
+        <div v-else-if="error && !hasOrders" class="center-state">
             <div class="state-icon error"><i class="pi pi-exclamation-circle"></i></div>
             <p class="state-title">Couldn't load orders</p>
             <p class="state-sub">{{ error }}</p>
@@ -62,7 +62,7 @@
         </div>
 
         <!-- Orders -->
-        <div v-else class="orders-content">
+        <div v-else class="orders-content" :class="{ 'is-refreshing': refreshing }">
 
             <!-- ── Active orders ─────────────────────── -->
             <template v-if="activeOrders.length > 0">
@@ -202,6 +202,7 @@ const pastTotal = ref(0);
 const completedCount = ref(0);
 const loading = ref(true);
 const loadingMore = ref(false);
+const refreshing = ref(false);
 const error = ref(null);
 const activeFilter = ref('all');
 
@@ -270,7 +271,10 @@ function formatTime(iso) {
 }
 
 async function loadHistory() {
-    loading.value = true;
+    // First load shows the skeleton; switching filters keeps the current list on
+    // screen and refreshes it underneath, so the page doesn't collapse and jump.
+    if (hasOrders.value) refreshing.value = true;
+    else loading.value = true;
     error.value = null;
     try {
         const { active, past, pastTotal: total, completedTotal } = await apiRequest.get(
@@ -284,6 +288,7 @@ async function loadHistory() {
         error.value = e.message;
     } finally {
         loading.value = false;
+        refreshing.value = false;
     }
 }
 
@@ -553,6 +558,12 @@ onMounted(loadHistory);
    ═══════════════════════════════════════════ */
 .orders-content {
     padding: 8px 14px 0;
+}
+
+/* Dim (no layout shift) while a filter switch refreshes the list underneath. */
+.orders-content.is-refreshing {
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
 }
 
 /* ── Section header ─────────────────────────── */
