@@ -53,6 +53,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { resolveFileUrl } from '../utils/fileUrl';
 
 const props = defineProps({
     request: {
@@ -76,16 +77,7 @@ const props = defineProps({
 defineEmits(['accept']);
 
 const resolvedPfpUrl = computed(() => {
-    const rawUrl = props.request?.requester?.pfpUrl;
-    if (!rawUrl) return null;
-
-    let fileServerUrl = import.meta.env.VITE_FILE_SERVER_URL || '';
-
-    if (fileServerUrl.endsWith('/')) {
-        fileServerUrl = fileServerUrl.slice(0, -1);
-    }
-
-    return `${fileServerUrl}${rawUrl}`;
+    return resolveFileUrl(props.request?.requester?.pfpUrl);
 });
 
 const itemCount = computed(() => {
