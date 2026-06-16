@@ -90,6 +90,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useThemeStore } from '../stores/theme';
 import { useAuthStore } from '../stores/auth';
+import { resolveFileUrl } from '../utils/fileUrl';
 
 import EditProfile from '../components/EditProfile.vue';
 import EditPayNow from '../components/EditPayNow.vue';
@@ -108,12 +109,6 @@ const handleLogout = async () => {
 
 const userProfile = computed(() => {
     const userData = authStore.user;
-    let fileServerUrl = import.meta.env.VITE_FILE_SERVER_URL || '';
-    if (fileServerUrl.endsWith('/')) {
-        fileServerUrl = fileServerUrl.slice(0, -1);
-    }
-    const fullPfpPath = userData?.pfp_url ? `${fileServerUrl}${userData.pfp_url}` : null;
-    const fullQrPath = userData?.paynow_qr_url ? `${fileServerUrl}${userData.paynow_qr_url}` : null;
 
     return {
         username: userData?.username || 'Guest',
@@ -123,8 +118,8 @@ const userProfile = computed(() => {
             : 'Unknown',
         deliveriesCount: Number(userData?.deliveries_completed ?? 0),
         numBadges: 0,
-        pfpUrl: fullPfpPath,
-        qrCodeUrl: fullQrPath
+        pfpUrl: resolveFileUrl(userData?.pfp_url),
+        qrCodeUrl: resolveFileUrl(userData?.paynow_qr_url)
     };
 });
 </script>

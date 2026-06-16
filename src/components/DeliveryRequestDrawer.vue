@@ -146,6 +146,7 @@
 <script setup>
 import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useAuthStore } from '../stores/auth';
+import { resolveFileUrl } from '../utils/fileUrl';
 const authStore = useAuthStore();
 
 import CancelPanel from './CancelPanel.vue';
@@ -290,16 +291,7 @@ const itemPreview = computed(() => {
 });
 
 const resolvedPfpUrl = computed(() => {
-    const rawUrl = props.request?.requester?.pfpUrl;
-    if (!rawUrl) return null;
-
-    let fileServerUrl = import.meta.env.VITE_FILE_SERVER_URL || '';
-
-    if (fileServerUrl.endsWith('/')) {
-        fileServerUrl = fileServerUrl.slice(0, -1);
-    }
-
-    return `${fileServerUrl}${rawUrl}`;
+    return resolveFileUrl(props.request?.requester?.pfpUrl);
 });
 
 // Drawer Drag
