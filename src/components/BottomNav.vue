@@ -10,21 +10,22 @@
       <span class="label">History</span>
     </router-link>
 
-    <div class="nav-item">
+    <div class="nav-item points-nav-item">
       <div class="points-badge">
         <span class="star"><i class="pi pi-star-fill"></i></span>
-        <span class="amount">{{ authStore.user?.points ?? 0 }} PTS</span>
+        <span class="points-text">
+          <span class="points-value">{{ authStore.user?.points ?? 0 }}</span>
+          <span class="points-unit">PTS</span>
+        </span>
       </div>
     </div>
 
     <router-link to="/messages" class="nav-item">
       <span class="icon">
         <i class="pi pi-comments"></i>
-        <span
-          v-if="messagesStore.totalUnread > 0"
-          class="nav-badge"
-          :aria-label="`${messagesStore.totalUnread} unread messages`"
-        >{{ messagesStore.totalUnread > 99 ? '99+' : messagesStore.totalUnread }}</span>
+        <span v-if="messagesStore.totalUnread > 0" class="nav-badge"
+          :aria-label="`${messagesStore.totalUnread} unread messages`">{{ messagesStore.totalUnread > 99 ? '99+' :
+            messagesStore.totalUnread }}</span>
       </span>
       <span class="label">Messages</span>
     </router-link>
@@ -50,17 +51,17 @@ const router = useRouter();
 const route = useRoute();
 
 const isDiscoverActive = computed(() =>
-    route.path === '/' || (requestStore.activeRequest && route.path === '/request')
+  route.path === '/' || (requestStore.activeRequest && route.path === '/request')
 );
 
 function goDiscover() {
-    // if (requestStore.activeRequest) {
-    //     router.push('/request');
-    // } else {
-    //     router.push('/');
-    // }
+  // if (requestStore.activeRequest) {
+  //     router.push('/request');
+  // } else {
+  //     router.push('/');
+  // }
 
-    router.push('/');
+  router.push('/');
 }
 </script>
 
@@ -76,6 +77,8 @@ function goDiscover() {
   justify-content: space-around;
   align-items: center;
   z-index: 1000;
+  padding: 0 6px;
+  box-sizing: border-box;
 }
 
 .nav-item {
@@ -89,8 +92,14 @@ function goDiscover() {
   border: none;
   cursor: pointer;
   flex: 1;
+  min-width: 0;
   height: 100%;
   transition: color 0.2s ease;
+}
+
+.points-nav-item {
+  flex: 0 1 auto;
+  padding: 0 4px;
 }
 
 /* Currently selected tab */
@@ -126,22 +135,78 @@ function goDiscover() {
 .label {
   font-size: 0.7rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Current points */
 .points-badge {
   background-color: #ffffff;
   color: var(--color-accent);
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: 8px 12px;
+  border-radius: 22px;
   font-weight: 700;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .star {
-  font-size: 1.1rem;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.points-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.points-value {
+  font-weight: 800;
+}
+
+.points-unit {
+  font-weight: 700;
+}
+
+/* Small screens */
+@media (max-width: 420px) {
+  .bottom-nav {
+    padding: 0 4px;
+  }
+
+  .label {
+    font-size: 0.66rem;
+  }
+
+  .points-badge {
+    padding: 7px 10px;
+    gap: 5px;
+    border-radius: 20px;
+  }
+
+  .points-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+  }
+
+  .points-value {
+    font-size: 1.05rem;
+  }
+
+  .points-unit {
+    font-size: 0.68rem;
+  }
+
+  .star {
+    font-size: 0.95rem;
+  }
 }
 </style>

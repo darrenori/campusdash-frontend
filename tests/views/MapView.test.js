@@ -1,6 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import { defineComponent, h, nextTick } from 'vue';
+import { nextTick } from 'vue';
 
 const mockSocket = {
     emit: jest.fn(),
@@ -52,7 +52,7 @@ jest.mock('vue3-google-map', () => {
                 expose({
                     map: mockMap,
                 });
-                // https://vuejs.org/guide/extras/render-function
+
                 return () =>
                     h(
                         'div',
@@ -78,7 +78,7 @@ jest.mock('vue3-google-map', () => {
                             'data-title': props.options?.title || '',
                             onClick: () => emit('click'),
                         },
-                        slots.default?.() || props.options?.title || ''
+                        slots.content?.() || slots.default?.() || props.options?.title || ''
                     );
             },
         }),
@@ -99,6 +99,55 @@ const runner = {
     pfpUrl: null,
 };
 
+const coordinates = {
+    LT28: {
+        lat: 1.297473646481507,
+        lng: 103.78121578306128,
+    },
+    YIH: {
+        lat: 1.298472440900191,
+        lng: 103.77507528896697,
+    },
+    TheDeck: {
+        lat: 1.294440026545261,
+        lng: 103.77256564663666,
+    },
+    Frontier: {
+        lat: 1.2964433479553557,
+        lng: 103.7803618830965,
+    },
+    TechnoEdge: {
+        lat: 1.2978825969642034,
+        lng: 103.77165288588382,
+    },
+    TheTerrace: {
+        lat: 1.2943981887817795,
+        lng: 103.7743379949419,
+    },
+    PGPCanteen: {
+        lat: 1.2906843782448865,
+        lng: 103.78217099994684,
+    },
+    FineFood: {
+        lat: 1.3040520791814607,
+        lng: 103.77353791197781,
+    },
+    FlavoursAtUTown: {
+        lat: 1.3044218319272263,
+        lng: 103.77298913810716,
+    },
+};
+
+const runnerLiveLocation = {
+    latitude: coordinates.YIH.lat,
+    longitude: coordinates.YIH.lng,
+};
+
+const buyerLiveLocation = {
+    latitude: coordinates.LT28.lat,
+    longitude: coordinates.LT28.lng,
+};
+
 const openRequests = [
     {
         id: 100,
@@ -115,12 +164,12 @@ const openRequests = [
         requester: buyer,
         deliverer: null,
         pickupCoords: {
-            lat: 1.304000,
-            lng: 103.773800,
+            lat: coordinates.Frontier.lat,
+            lng: coordinates.Frontier.lng,
         },
         deliveryCoords: {
-            lat: 1.297473646481507,
-            lng: 103.7812157830612,
+            lat: coordinates.LT28.lat,
+            lng: coordinates.LT28.lng,
         },
         collectedAt: null,
         deliveredAt: null,
@@ -128,7 +177,7 @@ const openRequests = [
     },
     {
         id: 101,
-        deliveryLocation: 'COM1',
+        deliveryLocation: 'The Deck',
         deliveryLocationId: 6,
         canteen: 'Techno Edge',
         canteenId: 4,
@@ -145,12 +194,12 @@ const openRequests = [
         },
         deliverer: null,
         pickupCoords: {
-            lat: 1.297,
-            lng: 103.773,
+            lat: coordinates.TechnoEdge.lat,
+            lng: coordinates.TechnoEdge.lng,
         },
         deliveryCoords: {
-            lat: 1.294,
-            lng: 103.772,
+            lat: coordinates.TheDeck.lat,
+            lng: coordinates.TheDeck.lng,
         },
         collectedAt: null,
         deliveredAt: null,
@@ -235,7 +284,7 @@ describe('MapView.vue', () => {
 
             expect(markers).toHaveLength(2);
             expect(markers[0].attributes('data-title')).toBe('LT28');
-            expect(markers[1].attributes('data-title')).toBe('COM1');
+            expect(markers[1].attributes('data-title')).toBe('The Deck');
         });
 
         it('emits select-request when an open order marker is clicked', async () => {
@@ -263,16 +312,18 @@ describe('MapView.vue', () => {
                 currentUserId: buyer.id,
             });
 
-            const markers = wrapper.findAll('.advanced-marker-stub');
+            const markerTitles = wrapper
+                .findAll('.advanced-marker-stub')
+                .map((marker) => marker.attributes('data-title'));
 
-            expect(markers).toHaveLength(2);
-            expect(markers[0].attributes('data-title')).toBe("Pickup: Chef's Wok");
-            expect(markers[1].attributes('data-title')).toBe('Delivery: LT28');
+            expect(markerTitles).toContain("Pickup: Chef's Wok");
+            expect(markerTitles).toContain('Delivery: LT28');
+            expect(markerTitles).not.toContain('The Deck');
         });
     });
 
     describe('runner location and route', () => {
-        it('joins the request room and starts watching location for the runner', () => {
+        it('joins the request room, tracks own location, and listens for participant locations as runner', () => {
             const request = createAcceptedRequest();
 
             wrapper = mountMap({
@@ -285,6 +336,11 @@ describe('MapView.vue', () => {
             });
 
             expect(navigator.geolocation.watchPosition).toHaveBeenCalled();
+
+            expect(mockSocket.on).toHaveBeenCalledWith(
+                'delivery:location',
+                expect.any(Function)
+            );
         });
 
         it('emits runner location and routes to pickup before the order is picked up', async () => {
@@ -299,8 +355,8 @@ describe('MapView.vue', () => {
 
             geolocationSuccess({
                 coords: {
-                    latitude: 1.298900,
-                    longitude: 103.774100,
+                    latitude: runnerLiveLocation.latitude,
+                    longitude: runnerLiveLocation.longitude,
                 },
             });
 
@@ -308,14 +364,16 @@ describe('MapView.vue', () => {
 
             expect(mockSocket.emit).toHaveBeenCalledWith('delivery:location', {
                 requestId: 100,
-                latitude: 1.298900,
-                longitude: 103.774100,
+                userId: runner.id,
+                role: 'runner',
+                latitude: runnerLiveLocation.latitude,
+                longitude: runnerLiveLocation.longitude,
             });
 
             expect(mockComputeRoutes).toHaveBeenCalledWith({
                 origin: {
-                    lat: 1.298900,
-                    lng: 103.774100,
+                    lat: runnerLiveLocation.latitude,
+                    lng: runnerLiveLocation.longitude,
                 },
                 destination: request.pickupCoords,
                 travelMode: 'WALKING',
@@ -337,8 +395,8 @@ describe('MapView.vue', () => {
 
             geolocationSuccess({
                 coords: {
-                    latitude: 1.298900,
-                    longitude: 103.774100,
+                    latitude: runnerLiveLocation.latitude,
+                    longitude: runnerLiveLocation.longitude,
                 },
             });
 
@@ -355,8 +413,8 @@ describe('MapView.vue', () => {
 
             geolocationSuccess({
                 coords: {
-                    latitude: 1.298900,
-                    longitude: 103.774100,
+                    latitude: runnerLiveLocation.latitude,
+                    longitude: runnerLiveLocation.longitude,
                 },
             });
 
@@ -364,13 +422,42 @@ describe('MapView.vue', () => {
 
             expect(mockComputeRoutes).toHaveBeenLastCalledWith({
                 origin: {
-                    lat: 1.298900,
-                    lng: 103.774100,
+                    lat: runnerLiveLocation.latitude,
+                    lng: runnerLiveLocation.longitude,
                 },
                 destination: request.deliveryCoords,
                 travelMode: 'WALKING',
                 fields: ['path'],
             });
+        });
+
+        it('displays buyer location received from socket in runner view', async () => {
+            const request = createAcceptedRequest();
+
+            wrapper = mountMap({
+                myRequest: request,
+                currentUserId: runner.id,
+            });
+
+            const locationHandler = mockSocket.on.mock.calls.find(
+                ([eventName]) => eventName === 'delivery:location'
+            )[1];
+
+            locationHandler({
+                requestId: 100,
+                userId: buyer.id,
+                role: 'buyer',
+                latitude: buyerLiveLocation.latitude,
+                longitude: buyerLiveLocation.longitude,
+            });
+
+            await nextTick();
+
+            const markerTitles = wrapper
+                .findAll('.advanced-marker-stub')
+                .map((marker) => marker.attributes('data-title'));
+
+            expect(markerTitles).toContain("Buyer's Location");
         });
 
         it('clears route and stops geolocation when active request is removed', async () => {
@@ -383,8 +470,8 @@ describe('MapView.vue', () => {
 
             geolocationSuccess({
                 coords: {
-                    latitude: 1.298900,
-                    longitude: 103.774100,
+                    latitude: runnerLiveLocation.latitude,
+                    longitude: runnerLiveLocation.longitude,
                 },
             });
 
@@ -401,8 +488,8 @@ describe('MapView.vue', () => {
         });
     });
 
-    describe('buyer receiving runner location', () => {
-        it('buyer listens for runner location updates', () => {
+    describe('buyer location without route', () => {
+        it('joins the request room, tracks own location, and listens for participant locations as buyer', () => {
             const request = createAcceptedRequest();
 
             wrapper = mountMap({
@@ -414,15 +501,43 @@ describe('MapView.vue', () => {
                 requestId: 100,
             });
 
+            expect(navigator.geolocation.watchPosition).toHaveBeenCalled();
+
             expect(mockSocket.on).toHaveBeenCalledWith(
                 'delivery:location',
                 expect.any(Function)
             );
-
-            expect(navigator.geolocation.watchPosition).not.toHaveBeenCalled();
         });
 
-        it('displays runner location received from socket', async () => {
+        it('emits buyer location but does not calculate route', async () => {
+            const request = createAcceptedRequest();
+
+            wrapper = mountMap({
+                myRequest: request,
+                currentUserId: buyer.id,
+            });
+
+            geolocationSuccess({
+                coords: {
+                    latitude: buyerLiveLocation.latitude,
+                    longitude: buyerLiveLocation.longitude,
+                },
+            });
+
+            await flushPromises();
+
+            expect(mockSocket.emit).toHaveBeenCalledWith('delivery:location', {
+                requestId: 100,
+                userId: buyer.id,
+                role: 'buyer',
+                latitude: buyerLiveLocation.latitude,
+                longitude: buyerLiveLocation.longitude,
+            });
+
+            expect(mockComputeRoutes).not.toHaveBeenCalled();
+        });
+
+        it('displays runner location received from socket in buyer view', async () => {
             const request = createAcceptedRequest();
 
             wrapper = mountMap({
@@ -436,8 +551,10 @@ describe('MapView.vue', () => {
 
             locationHandler({
                 requestId: 100,
-                latitude: 1.304000,
-                longitude: 103.773800,
+                userId: runner.id,
+                role: 'runner',
+                latitude: runnerLiveLocation.latitude,
+                longitude: runnerLiveLocation.longitude,
             });
 
             await nextTick();
@@ -449,7 +566,7 @@ describe('MapView.vue', () => {
             expect(markerTitles).toContain("Runner's Location");
         });
 
-        it('ignores runner location events for other requests', async () => {
+        it('ignores participant location events for other requests', async () => {
             const request = createAcceptedRequest();
 
             wrapper = mountMap({
@@ -463,8 +580,10 @@ describe('MapView.vue', () => {
 
             locationHandler({
                 requestId: 999,
-                latitude: 1.304000,
-                longitude: 103.773800,
+                userId: runner.id,
+                role: 'runner',
+                latitude: runnerLiveLocation.latitude,
+                longitude: runnerLiveLocation.longitude,
             });
 
             await nextTick();
@@ -475,8 +594,51 @@ describe('MapView.vue', () => {
 
             expect(markerTitles).not.toContain("Runner's Location");
         });
+    });
 
-        it('removes socket listener on unmount', () => {
+    describe('location marker colours', () => {
+        it('uses blue for own Runner location and orange for Buyer location in Runner view', async () => {
+            const request = createAcceptedRequest();
+
+            wrapper = mountMap({
+                myRequest: request,
+                currentUserId: runner.id,
+            });
+
+            geolocationSuccess({
+                coords: {
+                    latitude: runnerLiveLocation.latitude,
+                    longitude: runnerLiveLocation.longitude,
+                },
+            });
+
+            const locationHandler = mockSocket.on.mock.calls.find(
+                ([eventName]) => eventName === 'delivery:location'
+            )[1];
+
+            locationHandler({
+                requestId: 100,
+                userId: buyer.id,
+                role: 'buyer',
+                latitude: buyerLiveLocation.latitude,
+                longitude: buyerLiveLocation.longitude,
+            });
+
+            await flushPromises();
+
+            const runnerMarker = wrapper
+                .findAll('.advanced-marker-stub')
+                .find((marker) => marker.attributes('data-title') === "Runner's Location");
+
+            const buyerMarker = wrapper
+                .findAll('.advanced-marker-stub')
+                .find((marker) => marker.attributes('data-title') === "Buyer's Location");
+
+            expect(runnerMarker.find('.own-location').exists()).toBe(true);
+            expect(buyerMarker.find('.other-location').exists()).toBe(true);
+        });
+
+        it('uses blue for own Buyer location and orange for Runner location in Buyer view', async () => {
             const request = createAcceptedRequest();
 
             wrapper = mountMap({
@@ -484,12 +646,181 @@ describe('MapView.vue', () => {
                 currentUserId: buyer.id,
             });
 
-            wrapper.unmount();
+            geolocationSuccess({
+                coords: {
+                    latitude: buyerLiveLocation.latitude,
+                    longitude: buyerLiveLocation.longitude,
+                },
+            });
 
-            expect(mockSocket.off).toHaveBeenCalledWith(
-                'delivery:location',
-                expect.any(Function)
-            );
+            const locationHandler = mockSocket.on.mock.calls.find(
+                ([eventName]) => eventName === 'delivery:location'
+            )[1];
+
+            locationHandler({
+                requestId: 100,
+                userId: runner.id,
+                role: 'runner',
+                latitude: runnerLiveLocation.latitude,
+                longitude: runnerLiveLocation.longitude,
+            });
+
+            await flushPromises();
+
+            const buyerMarker = wrapper
+                .findAll('.advanced-marker-stub')
+                .find((marker) => marker.attributes('data-title') === "Buyer's Location");
+
+            const runnerMarker = wrapper
+                .findAll('.advanced-marker-stub')
+                .find((marker) => marker.attributes('data-title') === "Runner's Location");
+
+            expect(buyerMarker.find('.own-location').exists()).toBe(true);
+            expect(runnerMarker.find('.other-location').exists()).toBe(true);
+        });
+    });
+
+    describe('center location controls', () => {
+        it('shows Buyer and You buttons for Runner view with correct classes', async () => {
+            const request = createAcceptedRequest();
+
+            wrapper = mountMap({
+                myRequest: request,
+                currentUserId: runner.id,
+            });
+
+            geolocationSuccess({
+                coords: {
+                    latitude: runnerLiveLocation.latitude,
+                    longitude: runnerLiveLocation.longitude,
+                },
+            });
+
+            const locationHandler = mockSocket.on.mock.calls.find(
+                ([eventName]) => eventName === 'delivery:location'
+            )[1];
+
+            locationHandler({
+                requestId: 100,
+                userId: buyer.id,
+                role: 'buyer',
+                latitude: buyerLiveLocation.latitude,
+                longitude: buyerLiveLocation.longitude,
+            });
+
+            await flushPromises();
+
+            const buttons = wrapper.findAll('.center-location-btn');
+
+            expect(buttons).toHaveLength(2);
+
+            expect(buttons[0].text()).toBe('Buyer');
+            expect(buttons[0].classes()).toContain('other-location');
+
+            expect(buttons[1].text()).toBe('You');
+            expect(buttons[1].classes()).toContain('own-location');
+        });
+
+        it('shows You and Runner buttons for Buyer view with correct classes', async () => {
+            const request = createAcceptedRequest();
+
+            wrapper = mountMap({
+                myRequest: request,
+                currentUserId: buyer.id,
+            });
+
+            geolocationSuccess({
+                coords: {
+                    latitude: buyerLiveLocation.latitude,
+                    longitude: buyerLiveLocation.longitude,
+                },
+            });
+
+            const locationHandler = mockSocket.on.mock.calls.find(
+                ([eventName]) => eventName === 'delivery:location'
+            )[1];
+
+            locationHandler({
+                requestId: 100,
+                userId: runner.id,
+                role: 'runner',
+                latitude: runnerLiveLocation.latitude,
+                longitude: runnerLiveLocation.longitude,
+            });
+
+            await flushPromises();
+
+            const buttons = wrapper.findAll('.center-location-btn');
+
+            expect(buttons).toHaveLength(2);
+
+            expect(buttons[0].text()).toBe('You');
+            expect(buttons[0].classes()).toContain('own-location');
+
+            expect(buttons[1].text()).toBe('Runner');
+            expect(buttons[1].classes()).toContain('other-location');
+        });
+
+        it('centers on buyer location when buyer center button is clicked', async () => {
+            const request = createAcceptedRequest();
+
+            wrapper = mountMap({
+                myRequest: request,
+                currentUserId: runner.id,
+            });
+
+            const locationHandler = mockSocket.on.mock.calls.find(
+                ([eventName]) => eventName === 'delivery:location'
+            )[1];
+
+            locationHandler({
+                requestId: 100,
+                userId: buyer.id,
+                role: 'buyer',
+                latitude: buyerLiveLocation.latitude,
+                longitude: buyerLiveLocation.longitude,
+            });
+
+            await nextTick();
+
+            await wrapper.findAll('.center-location-btn')[0].trigger('click');
+
+            expect(mockMap.panTo).toHaveBeenCalledWith({
+                lat: buyerLiveLocation.latitude,
+                lng: buyerLiveLocation.longitude,
+            });
+            expect(mockMap.setZoom).toHaveBeenCalledWith(17);
+        });
+
+        it('centers on runner location when runner center button is clicked', async () => {
+            const request = createAcceptedRequest();
+
+            wrapper = mountMap({
+                myRequest: request,
+                currentUserId: buyer.id,
+            });
+
+            const locationHandler = mockSocket.on.mock.calls.find(
+                ([eventName]) => eventName === 'delivery:location'
+            )[1];
+
+            locationHandler({
+                requestId: 100,
+                userId: runner.id,
+                role: 'runner',
+                latitude: runnerLiveLocation.latitude,
+                longitude: runnerLiveLocation.longitude,
+            });
+
+            await nextTick();
+
+            await wrapper.findAll('.center-location-btn')[1].trigger('click');
+
+            expect(mockMap.panTo).toHaveBeenCalledWith({
+                lat: runnerLiveLocation.latitude,
+                lng: runnerLiveLocation.longitude,
+            });
+            expect(mockMap.setZoom).toHaveBeenCalledWith(17);
         });
     });
 
@@ -510,7 +841,7 @@ describe('MapView.vue', () => {
 
             expect(markers).toHaveLength(2);
             expect(markers[0].attributes('data-title')).toBe('LT28');
-            expect(markers[1].attributes('data-title')).toBe('COM1');
+            expect(markers[1].attributes('data-title')).toBe('The Deck');
         });
     });
 });

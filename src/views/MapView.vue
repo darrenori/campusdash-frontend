@@ -1,8 +1,22 @@
 <template>
     <div class="map-view">
         <GoogleMap :key="themeStore.isDark ? 'dark-map' : 'light-map'" ref="mapRef" :api-key="apiKey" :map-id="mapId"
-            class="google-map" :center="mapCenter" :zoom="16" :disable-default-ui="true" :clickable-icons="false" :keyboard-shortcuts="false"
-            :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'" @click="$emit('map-click')">
+            class="google-map" :center="mapCenter" :zoom="16" :disable-default-ui="true" :clickable-icons="false"
+            :keyboard-shortcuts="false" :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'"
+            @click="$emit('map-click')">
+
+            <div v-if="myRequest" class="map-center-controls">
+                <button type="button" class="center-location-btn" :class="isBuyer ? 'own-location' : 'other-location'"
+                    :disabled="!buyerCurrentLocation" @click.stop="centerOnLocation(buyerCurrentLocation)">
+                    {{ isBuyer ? 'You' : 'Buyer' }}
+                </button>
+
+                <button type="button" class="center-location-btn" :class="isRunner ? 'own-location' : 'other-location'"
+                    :disabled="!runnerCurrentLocation" @click.stop="centerOnLocation(runnerCurrentLocation)">
+                    {{ isRunner ? 'You' : 'Runner' }}
+                </button>
+            </div>
+
             <div v-if="!myRequest">
                 <AdvancedMarker v-for="request in requests" :key="request.id" :options="{
                     position: request.deliveryCoords,
@@ -15,10 +29,19 @@
             </div>
 
             <div v-else>
-                <AdvancedMarker v-if="runnersCurrentLocation"
-                    :options="{ position: runnersCurrentLocation, title: 'Runner\'s Location' }">
+                <AdvancedMarker v-if="runnerCurrentLocation"
+                    :options="{ position: runnerCurrentLocation, title: 'Runner\'s Location' }">
                     <template #content>
-                        <div class="live-location-dot"></div>
+                        <div class="live-location-dot" :class="isRunner ? 'own-location' : 'other-location'">
+                        </div>
+                    </template>
+                </AdvancedMarker>
+
+                <AdvancedMarker v-if="buyerCurrentLocation"
+                    :options="{ position: buyerCurrentLocation, title: 'Buyer\'s Location' }">
+                    <template #content>
+                        <div class="live-location-dot" :class="isBuyer ? 'own-location' : 'other-location'">
+                        </div>
                     </template>
                 </AdvancedMarker>
 
@@ -77,7 +100,9 @@ const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
 const mapRef = ref(null);
-const runnersCurrentLocation = ref(null);
+const runnerCurrentLocation = ref(null);
+const buyerCurrentLocation = ref(null);
+
 const hasCenteredOnUser = ref(false);
 
 let routePolylines = [];
@@ -117,15 +142,25 @@ const deliveryMarkerOptions = computed(() => {
 
 function centerOnUserOnce() {
     if (hasCenteredOnUser.value) return;
-    if (!runnersCurrentLocation.value) return;
+    if (!currentUserLocation.value) return;
 
     const map = mapRef.value?.map;
     if (!map) return;
 
-    map.panTo(runnersCurrentLocation.value);
+    map.panTo(currentUserLocation.value);
     map.setZoom(17);
 
     hasCenteredOnUser.value = true;
+}
+
+function centerOnLocation(location) {
+    if (!location) return;
+
+    const map = mapRef.value?.map;
+    if (!map) return;
+
+    map.panTo(location);
+    map.setZoom(17);
 }
 
 function trackUserLocation() {
@@ -133,24 +168,35 @@ function trackUserLocation() {
 
     geoWatchId = navigator.geolocation.watchPosition(
         (position) => {
-            runnersCurrentLocation.value = {
+            const location = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             };
 
             if (isRunner.value) {
-                const socket = getSocket();
-
-                socket?.emit('delivery:location', {
-                    requestId: props.myRequest.id,
-                    latitude: runnersCurrentLocation.value.lat,
-                    longitude: runnersCurrentLocation.value.lng
-                });
+                runnerCurrentLocation.value = location;
             }
+
+            if (isBuyer.value) {
+                buyerCurrentLocation.value = location;
+            }
+
+            const socket = getSocket();
+
+            socket?.emit('delivery:location', {
+                requestId: props.myRequest.id,
+                userId: props.currentUserId,
+                role: isRunner.value ? 'runner' : 'buyer',
+                latitude: location.lat,
+                longitude: location.lng
+            });
 
             if (props.myRequest) {
                 centerOnUserOnce();
-                calculateRoute();
+
+                if (isRunner.value) { // Only Runner should see the route
+                    calculateRoute();
+                }
             }
         },
         (error) => {
@@ -173,7 +219,8 @@ function stopTrackingUserLocation() {
     }
 
     geoWatchId = null;
-    runnersCurrentLocation.value = null;
+    runnerCurrentLocation.value = null;
+    buyerCurrentLocation.value = null;
 }
 
 const isRunner = computed(() => {
@@ -194,28 +241,49 @@ function joinRequestRoom() {
     });
 }
 
-// Runner should emit location
-function onRunnerLocation(payload) {
+// Buyer/Runner Location
+const currentUserLocation = computed(() => {
+    if (isRunner.value) return runnerCurrentLocation.value;
+    if (isBuyer.value) return buyerCurrentLocation.value;
+    return null;
+});
+
+function onParticipantLocation(payload) {
     if (!props.myRequest) return;
     if (Number(payload.requestId) !== Number(props.myRequest.id)) return;
 
-    runnersCurrentLocation.value = {
+    const location = {
         lat: payload.latitude,
         lng: payload.longitude
     };
 
+    const payloadUserId = Number(payload.userId);
+    const runnerId = Number(props.myRequest.deliverer?.id);
+    const buyerId = Number(props.myRequest.requester?.id);
+
+    if (payload.role === 'runner' || payloadUserId === runnerId) {
+        runnerCurrentLocation.value = location;
+    }
+
+    if (payload.role === 'buyer' || payloadUserId === buyerId) {
+        buyerCurrentLocation.value = location;
+    }
+
     centerOnUserOnce();
+
+    if (isRunner.value) {
+        calculateRoute();
+    }
 }
 
-// Buyer should listen for runner location
-function listenForRunnerLocation() {
+function listenForParticipantLocation() {
     const socket = getSocket();
-    socket?.on('delivery:location', onRunnerLocation);
+    socket?.on('delivery:location', onParticipantLocation);
 }
 
-function stopListeningForRunnerLocation() {
+function stopListeningForParticipantLocation() {
     const socket = getSocket();
-    socket?.off('delivery:location', onRunnerLocation);
+    socket?.off('delivery:location', onParticipantLocation);
 }
 
 function clearRoute() {
@@ -262,7 +330,7 @@ async function calculateRoute() {
         return;
     }
 
-    if (!runnersCurrentLocation.value) return;
+    if (!runnerCurrentLocation.value) return;
     if (!routeDestination.value) return;
 
     const googleMaps = window.google?.maps;
@@ -279,7 +347,7 @@ async function calculateRoute() {
         const { Route } = await googleMaps.importLibrary('routes');
 
         const { routes } = await Route.computeRoutes({
-            origin: runnersCurrentLocation.value,
+            origin: runnerCurrentLocation.value,
             destination: routeDestination.value,
             travelMode: 'WALKING',
             fields: ['path']
@@ -318,21 +386,19 @@ watch(
         clearRoute();
 
         stopTrackingUserLocation();
-        stopListeningForRunnerLocation();
+        stopListeningForParticipantLocation();
 
         if (!request) {
-            runnersCurrentLocation.value = null;
+            runnerCurrentLocation.value = null;
+            buyerCurrentLocation.value = null;
             return;
         }
 
         joinRequestRoom();
 
-        if (isRunner.value) {
+        if (isRunner.value || isBuyer.value) {
             trackUserLocation();
-        }
-
-        if (isBuyer.value) {
-            listenForRunnerLocation();
+            listenForParticipantLocation();
         }
     },
     { immediate: true }
@@ -340,7 +406,7 @@ watch(
 
 onUnmounted(() => {
     stopTrackingUserLocation();
-    stopListeningForRunnerLocation();
+    stopListeningForParticipantLocation();
     clearRoute();
 });
 </script>
@@ -361,11 +427,45 @@ onUnmounted(() => {
 .live-location-dot {
     width: 18px;
     height: 18px;
-    background-color: #4285F4;
     border: 3px solid white;
     border-radius: 50%;
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
     position: relative;
     transform: translate(-50%, -50%);
+}
+
+.own-location {
+    background-color: #4285F4;
+}
+
+.other-location {
+    background-color: #EF7C00;
+}
+
+/* Center Buttons */
+.map-center-controls {
+    position: absolute;
+    top: 24px;
+    right: 14px;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.center-location-btn {
+    border: 2px solid var(--border-color);
+    border-radius: 999px;
+    padding: 8px 12px;
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+}
+
+.center-location-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 </style>
