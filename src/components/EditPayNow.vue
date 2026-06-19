@@ -44,6 +44,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 
 import { apiRequest } from '../utils/api';
+import { showAchievementToasts } from '../utils/achievementToast';
 import { useAuthStore } from '../stores/auth';
 
 const authStore = useAuthStore();
@@ -153,6 +154,12 @@ const handleQrUpload = async () => {
         const response = await apiRequest.postFormData('/user/upload-qr', formData);
 
         authStore.setLoggedIn(response.user);
+
+        const unlockedAchievements = showAchievementToasts(toast, response.achievements);
+        emit('qr-updated', {
+            user: response.user,
+            achievements: unlockedAchievements,
+        });
 
         resetSelectedFile();
         isVisible.value = false;

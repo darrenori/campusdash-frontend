@@ -6,16 +6,25 @@
 </template>
 
 <script setup>
-import { onMounted, watch } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
 import { useMessagesStore } from './stores/messages';
+import { getSocket } from './utils/socket';
+import { showAchievementToasts } from './utils/achievementToast';
 
 import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 const messagesStore = useMessagesStore();
+const toast = useToast();
+const socket = getSocket();
+
+const onAchievementsUnlocked = ({ achievements = [] } = {}) => {
+  showAchievementToasts(toast, achievements);
+};
 
 // Keep the realtime messages store bound while authenticated so the unread
 // badge stays live everywhere; reset it on logout.
@@ -30,6 +39,11 @@ watch(
 
 onMounted(() => {
   themeStore.initTheme();
+  socket.on('achievements:unlocked', onAchievementsUnlocked);
+});
+
+onUnmounted(() => {
+  socket.off('achievements:unlocked', onAchievementsUnlocked);
 });
 </script>
 
