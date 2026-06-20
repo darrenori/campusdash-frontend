@@ -226,6 +226,7 @@ const handleQrUpload = async () => {
     height: 100%;
     object-fit: contain;
     padding: 12px;
+    background-color: white;
 }
 
 .placeholder-container {

@@ -58,28 +58,32 @@
                         </button>
                     </div>
 
-                    <div class="info-row">
+                    <div class="info-row clickable-info-row" @click="openUserProfileDialog(request.requester?.name)">
                         <div class="info-label">
                             <span class="info-icon-bubble">
                                 <i class="pi pi-user"></i>
                             </span>
                             <span>Buyer</span>
                         </div>
+
                         <button type="button" class="info-value copy-value"
-                            @click="copyToClipboard(request.requester?.name)">
+                            @click.stop="copyToClipboard(request.requester?.name)">
                             {{ justCopied === request.requester?.name ? 'Copied!' : request.requester?.name }}
                             <i class="pi pi-copy copy-icon"></i>
                         </button>
                     </div>
 
-                    <div v-if="showRunner" class="info-row">
+                    <div v-if="showRunner" class="info-row clickable-info-row"
+                        @click="openUserProfileDialog(request.deliverer?.name)">
                         <div class="info-label">
                             <span class="info-icon-bubble">
-                                <span class="svg-icon running-icon" aria-hidden="true"></span> </span>
+                                <span class="svg-icon running-icon" aria-hidden="true"></span>
+                            </span>
                             <span>Runner</span>
                         </div>
+
                         <button type="button" class="info-value copy-value"
-                            @click="copyToClipboard(request.deliverer?.name)">
+                            @click.stop="copyToClipboard(request.deliverer?.name)">
                             {{ justCopied === request.deliverer?.name ? 'Copied!' : request.deliverer?.name }}
                             <i class="pi pi-copy copy-icon"></i>
                         </button>
@@ -141,6 +145,8 @@
             </div>
         </section>
     </Transition>
+
+    <UserProfileDialog v-model:visible="showUserProfileDialog" :username="selectedProfileUsername" />
 </template>
 
 <script setup>
@@ -150,6 +156,7 @@ import { resolveFileUrl } from '../utils/fileUrl';
 const authStore = useAuthStore();
 
 import CancelPanel from './CancelPanel.vue';
+import UserProfileDialog from './UserProfileDialog.vue';
 
 const props = defineProps({
     visible: {
@@ -183,6 +190,18 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['accept', 'cancel', 'complete', 'collected', 'chat']);
+
+const showUserProfileDialog = ref(false);
+const selectedProfileUsername = ref('');
+
+function openUserProfileDialog(username) {
+    const normalizedUsername = String(username || '').trim();
+
+    if (!normalizedUsername) return;
+
+    selectedProfileUsername.value = normalizedUsername;
+    showUserProfileDialog.value = true;
+}
 
 const isAccepted = computed(() => props.request?.status === 'accepted');
 
@@ -227,6 +246,7 @@ watch(
         isExpanded.value = false;
         closeCancelReason();
         justCopied.value = null;
+        showUserProfileDialog.value = false;
     }
 );
 
@@ -612,6 +632,14 @@ async function copyToClipboard(value) {
 
 .info-row:last-child {
     border-bottom: none;
+}
+
+.clickable-info-row {
+    cursor: pointer;
+}
+
+.clickable-info-row:hover {
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .info-label {

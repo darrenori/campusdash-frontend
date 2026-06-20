@@ -1,7 +1,7 @@
 <template>
     <section class="conversation" aria-label="Conversation">
-        <header class="conv-header">
-            <button class="back-btn" aria-label="Back to conversations" @click="$emit('back')">
+        <header class="conv-header" :class="{ clickable: otherUser?.name }" @click="openUserProfileDialog">
+            <button class="back-btn" aria-label="Back to conversations" @click.stop="$emit('back')">
                 <i class="pi pi-chevron-left"></i>
             </button>
 
@@ -16,18 +16,14 @@
                 <span class="who-status">{{ online ? 'Online' : 'Offline' }}</span>
             </div>
 
-            <div class="header-menu">
-                <button
-                    class="menu-btn"
-                    aria-label="Conversation options"
-                    :aria-expanded="menuOpen"
-                    aria-haspopup="menu"
-                    @click="menuOpen = !menuOpen"
-                >
+            <div class="header-menu" @click.stop>
+                <button class="menu-btn" aria-label="Conversation options" :aria-expanded="menuOpen"
+                    aria-haspopup="menu" @click="menuOpen = !menuOpen">
                     <i class="pi pi-ellipsis-v"></i>
                 </button>
 
-                <button v-if="menuOpen" class="menu-backdrop" aria-hidden="true" tabindex="-1" @click="menuOpen = false"></button>
+                <button v-if="menuOpen" class="menu-backdrop" aria-hidden="true" tabindex="-1"
+                    @click="menuOpen = false"></button>
 
                 <div v-if="menuOpen" class="menu-pop" role="menu">
                     <button class="menu-item danger" role="menuitem" @click="openDeleteConfirm">
@@ -40,123 +36,117 @@
         <div v-if="connectionState !== 'connected'" class="conn-banner" role="status" aria-live="polite">
             <i class="pi pi-sync" :class="{ 'pi-spin': connectionState === 'reconnecting' }"></i>
             <span v-if="connectionState === 'reconnecting'">Reconnecting…</span>
-            <span v-else-if="connectionState === 'disconnected'">You're offline. Messages will send when you reconnect.</span>
+            <span v-else-if="connectionState === 'disconnected'">You're offline. Messages will send when you
+                reconnect.</span>
             <span v-else>Connecting…</span>
         </div>
 
         <div ref="scrollEl" class="message-scroll" @scroll="onScroll">
-          <div class="scroll-inner">
-            <div v-if="thread?.loading && !thread.items.length" class="state">
-                <i class="pi pi-spin pi-spinner"></i>
-                <span>Loading messages…</span>
-            </div>
-
-            <div v-else-if="thread?.error" class="state error" role="alert">
-                <i class="pi pi-exclamation-circle"></i>
-                <span>{{ thread.error }}</span>
-                <button class="retry" @click="store.loadMessages(conversationId)">Retry</button>
-            </div>
-
-            <template v-else>
-                <button
-                    v-if="thread?.hasMore"
-                    class="load-older"
-                    :disabled="thread.loading"
-                    @click="store.loadOlder(conversationId)"
-                >
-                    {{ thread.loading ? 'Loading…' : 'Load earlier messages' }}
-                </button>
-
-                <div v-if="!segments.length" class="state subtle">
-                    <span>No messages yet</span>
+            <div class="scroll-inner">
+                <div v-if="thread?.loading && !thread.items.length" class="state">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <span>Loading messages…</span>
                 </div>
 
-                <template v-for="seg in segments" :key="seg.key">
-                    <!-- Messages before any order share no header -->
-                    <template v-if="!seg.order">
-                        <template v-for="m in seg.messages" :key="m.id">
-                            <div v-if="dayDividers[m.id]" class="day-divider">
-                                <span>{{ dayDividers[m.id] }}</span>
-                            </div>
-                            <MessageBubble :message="m" :mine="m.sender.id === myId" />
-                        </template>
-                    </template>
+                <div v-else-if="thread?.error" class="state error" role="alert">
+                    <i class="pi pi-exclamation-circle"></i>
+                    <span>{{ thread.error }}</span>
+                    <button class="retry" @click="store.loadMessages(conversationId)">Retry</button>
+                </div>
 
-                    <!-- One collapsible order segment -->
-                    <div v-else class="order-block">
-                        <button
-                            class="order-divider"
-                            :aria-expanded="!isCollapsed(seg.order)"
-                            @click="toggle(seg.order.id)"
-                        >
-                            <i class="pi" :class="isCollapsed(seg.order) ? 'pi-chevron-right' : 'pi-chevron-down'"></i>
-                            <span class="od-label">Order #{{ seg.order.id }}</span>
-                            <span class="od-line"></span>
-                            <span class="od-hint">{{ segHint(seg) }}</span>
-                        </button>
+                <template v-else>
+                    <button v-if="thread?.hasMore" class="load-older" :disabled="thread.loading"
+                        @click="store.loadOlder(conversationId)">
+                        {{ thread.loading ? 'Loading…' : 'Load earlier messages' }}
+                    </button>
 
-                        <template v-if="!isCollapsed(seg.order)">
-                            <div class="order-card">
-                                <div class="order-main">
-                                    <p class="order-item">{{ seg.order.item }}</p>
-                                    <span class="order-sub"><template v-if="seg.order.stall">{{ seg.order.stall }} · </template>#{{ seg.order.id }}</span>
-                                </div>
-                                <button class="view-order-btn" @click="openOrder(seg.order)">Details</button>
-                            </div>
+                    <div v-if="!segments.length" class="state subtle">
+                        <span>No messages yet</span>
+                    </div>
 
-                            <button v-if="canComplete(seg.order)" class="order-action complete" :disabled="acting" @click="doComplete(seg.order)">
-                                {{ acting ? 'Completing…' : 'Complete order' }}
-                            </button>
-                            <button v-else-if="canPickup(seg.order)" class="order-action pickup" :disabled="acting" @click="doPickup(seg.order)">
-                                {{ acting ? 'Saving…' : 'Mark picked up' }}
-                            </button>
-                            <div v-else-if="showPickedChip(seg.order)" class="picked-chip">
-                                <i class="pi pi-check"></i> Picked up
-                            </div>
-
-                            <div v-if="seg.order.acceptedAt" class="sys-event">
-                                {{ acceptedBy(seg.order) }} accepted this order · {{ clock(seg.order.acceptedAt) }}
-                            </div>
-
+                    <template v-for="seg in segments" :key="seg.key">
+                        <!-- Messages before any order share no header -->
+                        <template v-if="!seg.order">
                             <template v-for="m in seg.messages" :key="m.id">
                                 <div v-if="dayDividers[m.id]" class="day-divider">
                                     <span>{{ dayDividers[m.id] }}</span>
                                 </div>
                                 <MessageBubble :message="m" :mine="m.sender.id === myId" />
                             </template>
-
-                            <div v-if="seg.order.status === 'completed'" class="sys-event">
-                                Order completed<template v-if="seg.order.deliveredAt"> · {{ clock(seg.order.deliveredAt) }}</template><template v-if="pointsText(seg.order)"> · {{ pointsText(seg.order) }}</template>
-                            </div>
-
-                            <div v-else-if="seg.order.status === 'cancelled'" class="sys-event">
-                                Order cancelled
-                            </div>
                         </template>
-                    </div>
-                </template>
-            </template>
 
-            <div v-if="someoneTyping" class="typing" aria-live="polite">
-                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                        <!-- One collapsible order segment -->
+                        <div v-else class="order-block">
+                            <button class="order-divider" :aria-expanded="!isCollapsed(seg.order)"
+                                @click="toggle(seg.order.id)">
+                                <i class="pi"
+                                    :class="isCollapsed(seg.order) ? 'pi-chevron-right' : 'pi-chevron-down'"></i>
+                                <span class="od-label">Order #{{ seg.order.id }}</span>
+                                <span class="od-line"></span>
+                                <span class="od-hint">{{ segHint(seg) }}</span>
+                            </button>
+
+                            <template v-if="!isCollapsed(seg.order)">
+                                <div class="order-card">
+                                    <div class="order-main">
+                                        <p class="order-item">{{ seg.order.item }}</p>
+                                        <span class="order-sub"><template v-if="seg.order.stall">{{ seg.order.stall }} ·
+                                            </template>#{{
+                                            seg.order.id }}</span>
+                                    </div>
+                                    <button class="view-order-btn" @click="openOrder(seg.order)">Details</button>
+                                </div>
+
+                                <button v-if="canComplete(seg.order)" class="order-action complete" :disabled="acting"
+                                    @click="doComplete(seg.order)">
+                                    {{ acting ? 'Completing…' : 'Complete order' }}
+                                </button>
+                                <button v-else-if="canPickup(seg.order)" class="order-action pickup" :disabled="acting"
+                                    @click="doPickup(seg.order)">
+                                    {{ acting ? 'Saving…' : 'Mark picked up' }}
+                                </button>
+                                <div v-else-if="showPickedChip(seg.order)" class="picked-chip">
+                                    <i class="pi pi-check"></i> Picked up
+                                </div>
+
+                                <div v-if="seg.order.acceptedAt" class="sys-event">
+                                    {{ acceptedBy(seg.order) }} accepted this order · {{ clock(seg.order.acceptedAt) }}
+                                </div>
+
+                                <template v-for="m in seg.messages" :key="m.id">
+                                    <div v-if="dayDividers[m.id]" class="day-divider">
+                                        <span>{{ dayDividers[m.id] }}</span>
+                                    </div>
+                                    <MessageBubble :message="m" :mine="m.sender.id === myId" />
+                                </template>
+
+                                <div v-if="seg.order.status === 'completed'" class="sys-event">
+                                    Order completed<template v-if="seg.order.deliveredAt"> · {{
+                                        clock(seg.order.deliveredAt) }}</template><template
+                                        v-if="pointsText(seg.order)"> · {{ pointsText(seg.order) }}</template>
+                                </div>
+
+                                <div v-else-if="seg.order.status === 'cancelled'" class="sys-event">
+                                    Order cancelled
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </template>
+
+                <div v-if="someoneTyping" class="typing" aria-live="polite">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                </div>
             </div>
-          </div>
         </div>
 
-        <MessageComposer
-            :conversation-id="conversationId"
-            :disabled="connectionState === 'disconnected'"
-            :peer="otherUser"
-        />
+        <MessageComposer :conversation-id="conversationId" :disabled="connectionState === 'disconnected'"
+            :peer="otherUser" />
 
-        <OrderDetailsSheet
-            v-if="selectedOrder"
-            :visible="showOrder"
-            :order="selectedOrder"
-            :buyer-name="sheetBuyerName"
-            :runner-name="sheetRunnerName"
-            @close="showOrder = false"
-        />
+        <OrderDetailsSheet v-if="selectedOrder" :visible="showOrder" :order="selectedOrder" :buyer-name="sheetBuyerName"
+            :runner-name="sheetRunnerName" @close="showOrder = false" />
+
+        <UserProfileDialog v-model:visible="showUserProfileDialog" :username="otherUser?.name" />
 
         <Transition name="confirm-fade">
             <div v-if="confirmDelete" class="confirm-overlay" @click.self="confirmDelete = false">
@@ -167,7 +157,8 @@
                         messages you or you order together again.
                     </p>
                     <div class="confirm-actions">
-                        <button class="confirm-cancel" :disabled="deleting" @click="confirmDelete = false">Cancel</button>
+                        <button class="confirm-cancel" :disabled="deleting"
+                            @click="confirmDelete = false">Cancel</button>
                         <button class="confirm-delete" :disabled="deleting" @click="doDelete">
                             {{ deleting ? 'Deleting…' : 'Delete' }}
                         </button>
@@ -187,6 +178,7 @@ import { resolveFileUrl } from '../../utils/fileUrl';
 import MessageBubble from './MessageBubble.vue';
 import MessageComposer from './MessageComposer.vue';
 import OrderDetailsSheet from './OrderDetailsSheet.vue';
+import UserProfileDialog from '../UserProfileDialog.vue';
 
 defineEmits(['back']);
 
@@ -215,6 +207,13 @@ const acting = ref(false);
 const menuOpen = ref(false);
 const confirmDelete = ref(false);
 const deleting = ref(false);
+const showUserProfileDialog = ref(false);
+
+function openUserProfileDialog() {
+    if (!otherUser.value?.name) return;
+    menuOpen.value = false;
+    showUserProfileDialog.value = true;
+}
 
 const toMs = (iso) => {
     const t = new Date(iso).getTime();
@@ -276,10 +275,10 @@ function segHint(seg) {
         o.status === 'completed'
             ? 'Completed'
             : o.status === 'cancelled'
-              ? 'Cancelled'
-              : o.status === 'accepted'
-                ? 'Active'
-                : '';
+                ? 'Cancelled'
+                : o.status === 'accepted'
+                    ? 'Active'
+                    : '';
     const n = seg.messages.length;
     const msgs = n ? `${n} message${n > 1 ? 's' : ''}` : '';
     return [status, msgs].filter(Boolean).join(' · ');
@@ -425,6 +424,7 @@ watch(conversationId, () => {
     selectedOrder.value = null;
     menuOpen.value = false;
     confirmDelete.value = false;
+    showUserProfileDialog.value = false;
     Object.keys(collapsed).forEach((k) => delete collapsed[k]); // fresh defaults
     scrollToBottom();
 });
@@ -453,6 +453,10 @@ onMounted(scrollToBottom);
     padding: 10px 16px;
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border-color);
+}
+
+.conv-header.clickable {
+    cursor: pointer;
 }
 
 .back-btn {
@@ -984,8 +988,18 @@ onMounted(scrollToBottom);
 }
 
 @keyframes typing-bounce {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-    30% { transform: translateY(-4px); opacity: 1; }
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.5;
+    }
+
+    30% {
+        transform: translateY(-4px);
+        opacity: 1;
+    }
 }
 
 @media (max-width: 760px) {
