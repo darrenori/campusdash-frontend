@@ -1,30 +1,25 @@
 <template>
   <div class="min-h-screen bg-gray-50 font-sans text-gray-900">
     <Toast position="top-right" />
+
+    <AchievementToastListener v-if="authStore.isAuthenticated" :key="authStore.user?.id" />
+
     <router-view />
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, watch } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
 import { useMessagesStore } from './stores/messages';
-import { getSocket } from './utils/socket';
-import { showAchievementToasts } from './utils/achievementToast';
 
 import Toast from 'primevue/toast';
-import { useToast } from 'primevue/usetoast';
+import AchievementToastListener from './components/AchievementToastListener.vue';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 const messagesStore = useMessagesStore();
-const toast = useToast();
-const socket = getSocket();
-
-const onAchievementsUnlocked = ({ achievements = [] } = {}) => {
-  showAchievementToasts(toast, achievements);
-};
 
 // Keep the realtime messages store bound while authenticated so the unread
 // badge stays live everywhere; reset it on logout.
@@ -39,11 +34,6 @@ watch(
 
 onMounted(() => {
   themeStore.initTheme();
-  socket.on('achievements:unlocked', onAchievementsUnlocked);
-});
-
-onUnmounted(() => {
-  socket.off('achievements:unlocked', onAchievementsUnlocked);
 });
 </script>
 

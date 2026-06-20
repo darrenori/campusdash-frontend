@@ -153,7 +153,6 @@ import { useThemeStore } from '../stores/theme';
 import { useAuthStore } from '../stores/auth';
 import { apiRequest } from '../utils/api';
 import { resolveFileUrl } from '../utils/fileUrl';
-import { getSocket } from '../utils/socket';
 
 import EditProfile from '../components/EditProfile.vue';
 import EditPayNow from '../components/EditPayNow.vue';
@@ -162,7 +161,6 @@ import BottomNav from '../components/BottomNav.vue';
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 const toast = useToast();
-const socket = getSocket();
 
 const showEditView = ref(false);
 const showQrModal = ref(false);
@@ -379,14 +377,6 @@ watch(
     },
     { immediate: true }
 );
-
-onMounted(() => {
-    socket?.on('achievements:unlocked', onAchievementsUnlocked);
-});
-
-onUnmounted(() => {
-    socket?.off('achievements:unlocked', onAchievementsUnlocked);
-});
 </script>
 
 <style scoped>
