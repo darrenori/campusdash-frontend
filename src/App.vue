@@ -1,6 +1,9 @@
 <template>
   <div class="min-h-screen bg-gray-50 font-sans text-gray-900">
     <Toast position="top-right" />
+
+    <AchievementToastListener v-if="authStore.isAuthenticated" :key="authStore.user?.id" />
+
     <router-view />
   </div>
 </template>
@@ -12,6 +15,7 @@ import { useAuthStore } from './stores/auth';
 import { useMessagesStore } from './stores/messages';
 
 import Toast from 'primevue/toast';
+import AchievementToastListener from './components/AchievementToastListener.vue';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
