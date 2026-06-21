@@ -16,24 +16,59 @@ const resolveBackendUrl = () => {
 const BACKEND_URL = resolveBackendUrl();
 
 const resolveSocketUrl = () => {
-    const envUrl = import.meta.env.VITE_SOCKET_URL;
+    const envSocketUrl = import.meta.env.VITE_SOCKET_URL;
 
     if (import.meta.env.DEV) {
-        return normalizeBaseUrl(envUrl || BACKEND_URL.replace(/\/api$/, ''));
+        return normalizeBaseUrl(envSocketUrl || BACKEND_URL.replace(/\/api$/, ''));
     }
 
-    return normalizeBaseUrl(envUrl && isRelativeUrl(envUrl) ? envUrl : BACKEND_URL.replace(/\/api$/, ''));
+    if (envSocketUrl && !isRelativeUrl(envSocketUrl)) {
+        return normalizeBaseUrl(envSocketUrl);
+    }
+
+    const envBackendUrl = import.meta.env.VITE_BACKEND_URL;
+    if (envBackendUrl && !isRelativeUrl(envBackendUrl)) {
+        return normalizeBaseUrl(envBackendUrl.replace(/\/api$/, ''));
+    }
+
+    return window.location.origin;
 };
 
 const SOCKET_URL = resolveSocketUrl();
 
 let socket;
 
+async function fetchSocketToken() {
+    const response = await fetch(`${BACKEND_URL}/auth/socket-token`, {
+        credentials: 'include',
+        headers: {
+            Accept: 'application/json',
+        },
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.token) {
+        throw new Error(result.error || 'Unable to authenticate realtime connection.');
+    }
+
+    return result.token;
+}
+
 export function getSocket() {
     if (!socket) {
-        socket = io(SOCKET_URL, {
+        const options = {
             withCredentials: true,
-        });
+        };
+
+        if (!import.meta.env.DEV) {
+            options.auth = (callback) => {
+                fetchSocketToken()
+                    .then((token) => callback({ token }))
+                    .catch(() => callback({}));
+            };
+        }
+
+        socket = io(SOCKET_URL, options);
     }
     return socket;
 }
