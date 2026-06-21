@@ -73,11 +73,12 @@ function goDiscover() {
   width: 100%;
   height: 70px;
   background: var(--color-primary);
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
+  column-gap: 2px;
   align-items: center;
   z-index: 1000;
-  padding: 0 6px;
+  padding: 0 8px;
   box-sizing: border-box;
 }
 
@@ -91,15 +92,14 @@ function goDiscover() {
   background: transparent;
   border: none;
   cursor: pointer;
-  flex: 1;
   min-width: 0;
   height: 100%;
   transition: color 0.2s ease;
 }
 
 .points-nav-item {
-  flex: 0 1 auto;
-  padding: 0 4px;
+  cursor: default;
+  padding: 0 2px;
 }
 
 /* Currently selected tab */
@@ -142,20 +142,20 @@ function goDiscover() {
 .points-badge {
   background-color: #ffffff;
   color: var(--color-accent);
-  padding: 8px 12px;
-  border-radius: 22px;
+  padding: 9px 14px;
+  border-radius: 999px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   max-width: 100%;
   box-sizing: border-box;
 }
 
 .star {
-  font-size: 1rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
 }
 
@@ -168,27 +168,34 @@ function goDiscover() {
 }
 
 .points-value {
+  font-size: 1.08rem;
   font-weight: 800;
 }
 
 .points-unit {
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
 /* Small screens */
 @media (max-width: 420px) {
   .bottom-nav {
-    padding: 0 4px;
+    padding: 0 6px;
+    column-gap: 1px;
   }
 
   .label {
-    font-size: 0.66rem;
+    font-size: 0.64rem;
+  }
+
+  .icon {
+    font-size: 1.32rem;
   }
 
   .points-badge {
-    padding: 7px 10px;
-    gap: 5px;
-    border-radius: 20px;
+    padding: 7px 12px;
+    gap: 6px;
+    border-radius: 22px;
   }
 
   .points-text {
@@ -198,15 +205,21 @@ function goDiscover() {
   }
 
   .points-value {
-    font-size: 1.05rem;
+    font-size: 1rem;
   }
 
   .points-unit {
-    font-size: 0.68rem;
+    font-size: 0.62rem;
   }
 
   .star {
     font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .points-badge {
+    padding: 7px 10px;
   }
 }
 </style>
