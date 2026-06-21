@@ -13,7 +13,10 @@
 
             <!-- Delivery location picker -->
             <div v-if="!activeLoading && !activeRequest" class="location-wrap">
-                <button type="button" class="location-btn" @click="menuOpen = !menuOpen">
+                <span class="location-caption">Deliver to</span>
+                <button type="button" class="location-btn" :class="{ nudge: showLocationNudge }"
+                    @click="toggleLocationMenu">
+                    <i class="pi pi-map-marker location-pin"></i>
                     <span>{{ form.deliveryLocation }}</span>
                     <i class="pi pi-chevron-down chevron" :class="{ rotated: menuOpen }"></i>
                 </button>
@@ -206,7 +209,10 @@ const form = ref({
     deliveryInfo: '',
 });
 const menuOpen = ref(false);
+const showLocationNudge = ref(false);
 const customLocation = ref('');
+
+const LOCATION_HINT_KEY = 'cd_location_hint_seen';
 const submitting = ref(false);
 const cancelling = ref(false);
 const completing = ref(false);
@@ -306,6 +312,22 @@ async function loadLocations() {
         locations.value = data;
     } catch (e) {
         locations.value = fallbackLocations.map((name, index) => ({ id: index + 1, name }));
+    }
+}
+
+function toggleLocationMenu() {
+    menuOpen.value = !menuOpen.value;
+    if (menuOpen.value) showLocationNudge.value = false;
+}
+
+// One-time pulse on the location button so first-time users notice it's editable
+function primeLocationNudge() {
+    try {
+        if (localStorage.getItem(LOCATION_HINT_KEY)) return;
+        showLocationNudge.value = true;
+        localStorage.setItem(LOCATION_HINT_KEY, '1');
+    } catch (e) {
+        // storage unavailable (e.g. private mode) — skip the nudge
     }
 }
 
@@ -572,6 +594,7 @@ onMounted(() => {
     loadActiveRequest();
     loadCatalog();
     loadLocations();
+    primeLocationNudge();
     socket.on('request:active', onActiveRequest);
     socket.on('request:accepted', onAccepted);
     socket.on('request:collected', onCollected);
@@ -664,22 +687,62 @@ onUnmounted(() => {
     z-index: 20;
 }
 
-.location-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: transparent;
-    border: none;
-    padding: 2px 0;
-    cursor: pointer;
-    color: #ffffff;
-    font-size: 1.5rem;
-    font-weight: 900;
+.location-caption {
+    display: block;
+    margin-bottom: 4px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.72rem;
+    font-weight: 500;
     letter-spacing: 0;
 }
 
+.location-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.18);
+    border: none;
+    border-radius: 980px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.location-btn:hover {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.location-btn:active {
+    transform: scale(0.97);
+}
+
+.location-pin {
+    font-size: 0.82rem;
+}
+
+.location-btn.nudge {
+    animation: locationNudge 1.3s ease-in-out 3;
+}
+
+@keyframes locationNudge {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.14);
+    }
+}
+
 .chevron {
-    font-size: 0.85rem;
+    font-size: 0.62rem;
+    opacity: 0.85;
     transition: transform 0.25s ease;
 }
 

@@ -1,8 +1,31 @@
 import { io } from 'socket.io-client';
 
-const normalizeBaseUrl = (url) => url.replace(/\/+$/, '');
-const BACKEND_URL = normalizeBaseUrl(import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api'));
-const SOCKET_URL = normalizeBaseUrl(import.meta.env.VITE_SOCKET_URL || BACKEND_URL.replace(/\/api$/, ''));
+const normalizeBaseUrl = (url = '') => url.replace(/\/+$/, '');
+const isRelativeUrl = (url) => !/^https?:\/\//i.test(url);
+
+const resolveBackendUrl = () => {
+    const envUrl = import.meta.env.VITE_BACKEND_URL;
+
+    if (import.meta.env.DEV) {
+        return normalizeBaseUrl(envUrl || 'http://localhost:8080/api');
+    }
+
+    return normalizeBaseUrl(envUrl && isRelativeUrl(envUrl) ? envUrl : '/api');
+};
+
+const BACKEND_URL = resolveBackendUrl();
+
+const resolveSocketUrl = () => {
+    const envUrl = import.meta.env.VITE_SOCKET_URL;
+
+    if (import.meta.env.DEV) {
+        return normalizeBaseUrl(envUrl || BACKEND_URL.replace(/\/api$/, ''));
+    }
+
+    return normalizeBaseUrl(envUrl && isRelativeUrl(envUrl) ? envUrl : BACKEND_URL.replace(/\/api$/, ''));
+};
+
+const SOCKET_URL = resolveSocketUrl();
 
 let socket;
 

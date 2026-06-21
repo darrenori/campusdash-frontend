@@ -60,8 +60,8 @@ const tabs = computed(() => {
     const count = filteredRequests.value.length || null;
     return [
         { key: 'nearby', label: 'Nearby Me', badge: count },
-        { key: 'recent', label: 'Recent', badge: count },
-        { key: 'next-class', label: 'Next Class', badge: null },
+        { key: 'recent', label: 'Recent (WIP)', badge: count },
+        { key: 'next-class', label: 'Next Class (WIP)', badge: null },
     ];
 });
 </script>

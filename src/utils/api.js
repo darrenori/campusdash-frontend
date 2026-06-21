@@ -1,8 +1,20 @@
 import { useAuthStore } from "../stores/auth";
 import router from "../router";
 
-const normalizeBaseUrl = (url) => url.replace(/\/+$/, '');
-const BASE_URL = normalizeBaseUrl(import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api'));
+const normalizeBaseUrl = (url = '') => url.replace(/\/+$/, '');
+const isRelativeUrl = (url) => !/^https?:\/\//i.test(url);
+
+const resolveBaseUrl = () => {
+    const envUrl = import.meta.env.VITE_BACKEND_URL;
+
+    if (import.meta.env.DEV) {
+        return normalizeBaseUrl(envUrl || 'http://localhost:8080/api');
+    }
+
+    return normalizeBaseUrl(envUrl && isRelativeUrl(envUrl) ? envUrl : '/api');
+};
+
+const BASE_URL = resolveBaseUrl();
 
 const parseJsonResponse = async (response) => {
     const body = await response.text();

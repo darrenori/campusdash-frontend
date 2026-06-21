@@ -144,7 +144,7 @@ function goDiscover() {
   color: var(--color-accent);
   padding: 9px 14px;
   border-radius: 999px;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -165,16 +165,15 @@ function goDiscover() {
   gap: 4px;
   line-height: 1;
   white-space: nowrap;
+  font-size: 1.08rem;
 }
 
 .points-value {
-  font-size: 1.08rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .points-unit {
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* Small screens */
@@ -202,6 +201,7 @@ function goDiscover() {
     flex-direction: column;
     align-items: flex-start;
     gap: 1px;
+    font-size: 1rem;
   }
 
   .points-value {
@@ -218,8 +218,37 @@ function goDiscover() {
 }
 
 @media (max-width: 340px) {
+  .bottom-nav {
+    padding: 0 4px;
+  }
+
+  .label {
+    font-size: 0.61rem;
+  }
+
+  .icon {
+    font-size: 1.24rem;
+  }
+
   .points-badge {
-    padding: 7px 10px;
+    padding: 6px 8px;
+    gap: 5px;
+  }
+
+  .points-text {
+    font-size: 0.92rem;
+  }
+
+  .points-value {
+    font-size: 0.92rem;
+  }
+
+  .points-unit {
+    font-size: 0.54rem;
+  }
+
+  .star {
+    font-size: 0.84rem;
   }
 }
 </style>
