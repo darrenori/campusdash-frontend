@@ -9,4 +9,5 @@ globalThis.__importMeta__ = {
     PROD: false,
     MODE: 'test',
   },
+  glob: () => ({}),
 };
