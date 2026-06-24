@@ -1,5 +1,5 @@
 import { mount, flushPromises } from '@vue/test-utils';
-import MessageComposer from '../../../src/components/messages/MessageComposer.vue';
+import MessageComposer from '../../../../src/components/messages/MessageComposer.vue';
 
 //mocks
 const mockToastAdd = jest.fn();
@@ -15,12 +15,12 @@ const mockStore = {
     sendStopTyping: jest.fn(),
     lastError: null,
 };
-jest.mock('../../../src/stores/messages', () => ({
+jest.mock('../../../../src/stores/messages', () => ({
     useMessagesStore: () => mockStore,
 }));
 
 //keep the socket import inert (messages store pulls it in at module load)
-jest.mock('../../../src/utils/socket.js', () => ({
+jest.mock('../../../../src/utils/socket.js', () => ({
     getSocket: () => ({ on: jest.fn(), off: jest.fn(), emit: jest.fn() }),
 }));
 

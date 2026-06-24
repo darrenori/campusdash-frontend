@@ -8,7 +8,7 @@ const mockSocket = {
     off: jest.fn(),
 };
 
-jest.mock('../../src/utils/socket', () => ({
+jest.mock('../../../src/utils/socket', () => ({
     getSocket: () => mockSocket,
 }));
 
@@ -85,7 +85,7 @@ jest.mock('vue3-google-map', () => {
     };
 });
 
-import MapView from '../../src/views/MapView.vue';
+import MapView from '../../../src/views/MapView.vue';
 
 const buyer = {
     id: 2,

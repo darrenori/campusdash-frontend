@@ -1,6 +1,6 @@
 import { setActivePinia, createPinia } from 'pinia';
 
-jest.mock('../../src/utils/socket', () => {
+jest.mock('../../../src/utils/socket', () => {
   const handlers = {};
   const ioHandlers = {};
   const socket = {
@@ -17,19 +17,19 @@ jest.mock('../../src/utils/socket', () => {
   return { getSocket: () => socket, disconnectSocket: jest.fn() };
 });
 
-jest.mock('../../src/utils/api', () => ({
+jest.mock('../../../src/utils/api', () => ({
   apiRequest: { get: jest.fn(), post: jest.fn(), patch: jest.fn(), postFormData: jest.fn(), delete: jest.fn() },
 }));
 
-jest.mock('../../src/router/index.js', () => ({
+jest.mock('../../../src/router/index.js', () => ({
   __esModule: true,
   default: { push: jest.fn() },
 }));
 
-import { apiRequest } from '../../src/utils/api';
-import { getSocket } from '../../src/utils/socket';
-import { useMessagesStore } from '../../src/stores/messages.js';
-import { useAuthStore } from '../../src/stores/auth.js';
+import { apiRequest } from '../../../src/utils/api';
+import { getSocket } from '../../../src/utils/socket';
+import { useMessagesStore } from '../../../src/stores/messages.js';
+import { useAuthStore } from '../../../src/stores/auth.js';
 
 const fakeSocket = getSocket();
 const handlers = fakeSocket.__handlers;

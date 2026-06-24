@@ -1,7 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
-import RequestView from '../../src/views/RequestView.vue';
-import { apiRequest } from '../../src/utils/api.js';
+import RequestView from '../../../src/views/RequestView.vue';
+import { apiRequest } from '../../../src/utils/api.js';
 
 //mock
 const mockRouterReplace = jest.fn();
@@ -15,7 +15,7 @@ jest.mock('vue-router', () => ({
     }),
 }));
 
-jest.mock('../../src/router/index.js', () => ({
+jest.mock('../../../src/router/index.js', () => ({
     __esModule: true,
     default: { push: jest.fn(), replace: jest.fn(), beforeEach: jest.fn() },
 }));
@@ -26,12 +26,12 @@ jest.mock('primevue/usetoast', () => ({
 }));
 
 // return fresh mock
-jest.mock('../../src/utils/socket.js', () => ({
+jest.mock('../../../src/utils/socket.js', () => ({
     getSocket: () => ({ on: jest.fn(), off: jest.fn(), emit: jest.fn() }),
 }));
 
-jest.mock('../../src/utils/api.js');
-jest.mock('../../src/assets/logos/logo-square.svg', () => 'logo-stub');
+jest.mock('../../../src/utils/api.js');
+jest.mock('../../../src/assets/logos/logo-square.svg', () => 'logo-stub');
 
 //helper
 const DEFAULT_USER = { id: 1, username: 'tester', points: 5 };

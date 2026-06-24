@@ -1,8 +1,8 @@
 import { mount, flushPromises } from '@vue/test-utils';
-import ForgotPasswordView from '../../src/views/ForgotPasswordView.vue';
-import { apiRequest } from '../../src/utils/api.js';
+import ForgotPasswordView from '../../../src/views/ForgotPasswordView.vue';
+import { apiRequest } from '../../../src/utils/api.js';
 
-jest.mock('../../src/utils/api.js');
+jest.mock('../../../src/utils/api.js');
 
 const mockRouterPush = jest.fn();
 
@@ -17,9 +17,9 @@ jest.mock('vue-router', () => ({
     }),
 }));
 
-jest.mock('../../src/assets/top-waves-1.svg', () => 'top-waves-stub');
-jest.mock('../../src/assets/bottom-waves-1.svg', () => 'bottom-waves-stub');
-jest.mock('../../src/assets/logos/logo-full.svg', () => 'logo-full-stub');
+jest.mock('../../../src/assets/top-waves-1.svg', () => 'top-waves-stub');
+jest.mock('../../../src/assets/bottom-waves-1.svg', () => 'bottom-waves-stub');
+jest.mock('../../../src/assets/logos/logo-full.svg', () => 'logo-full-stub');
 
 jest.mock('primevue/iconfield', () => ({ template: '<div><slot/></div>' }));
 jest.mock('primevue/inputicon', () => ({ template: '<i/>' }));

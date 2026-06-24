@@ -14,7 +14,7 @@ jest.mock('vue-router', () => ({
     }),
 }));
 
-jest.mock('../../src/utils/api.js', () => ({
+jest.mock('../../../src/utils/api.js', () => ({
     apiRequest: {
         get: jest.fn(),
         post: jest.fn(),
@@ -23,9 +23,9 @@ jest.mock('../../src/utils/api.js', () => ({
     },
 }));
 
-import DeliveryRequestDrawer from '../../src/components/DeliveryRequestDrawer.vue';
-import CancelPanel from '../../src/components/CancelPanel.vue';
-import { useAuthStore } from '../../src/stores/auth.js';
+import DeliveryRequestDrawer from '../../../src/components/DeliveryRequestDrawer.vue';
+import CancelPanel from '../../../src/components/CancelPanel.vue';
+import { useAuthStore } from '../../../src/stores/auth.js';
 
 const buyer = {
     id: 2,

@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import CancelPanel from '../../src/components/CancelPanel.vue';
+import CancelPanel from '../../../src/components/CancelPanel.vue';
 
 function mountPanel(props = {}) {
     return mount(CancelPanel, {

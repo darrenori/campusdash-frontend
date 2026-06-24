@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import MessageBubble from '../../../src/components/messages/MessageBubble.vue';
+import MessageBubble from '../../../../src/components/messages/MessageBubble.vue';
 
 const baseMessage = {
   id: 1,

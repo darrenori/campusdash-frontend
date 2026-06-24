@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import DeliveryRequestCard from '../../src/components/DeliveryRequestCard.vue';
+import DeliveryRequestCard from '../../../src/components/DeliveryRequestCard.vue';
 
 const baseRequest = {
   id: 'req-1',
