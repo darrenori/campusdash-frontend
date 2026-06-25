@@ -119,7 +119,7 @@
 
                     <div class="item-row">
                         <span>{{ itemPreview }}</span>
-                        <strong>{{ request.stall }}</strong>
+                        <strong>{{ stallDisplay }}</strong>
                     </div>
 
                     <p v-if="request.specialRequest" class="special-request">
@@ -308,6 +308,16 @@ const paddedOrderId = computed(() => {
 const itemPreview = computed(() => {
     if (!props.request?.item) return '';
     return props.request.item;
+});
+
+const stallDisplay = computed(() => {
+    const canteen = props.request?.canteen;
+    const stall = props.request?.stall;
+
+    if (canteen && stall) return `${canteen} - ${stall}`;
+    if (stall) return stall;
+    if (canteen) return canteen;
+    return '-';
 });
 
 const resolvedPfpUrl = computed(() => {
