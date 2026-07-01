@@ -5,6 +5,9 @@ module.exports = {
     '^.+\\.vue$': '@vue/vue3-jest',
     '^.+\\.js$': 'babel-jest',
   },
+  moduleNameMapper: {
+    '^primevue/dialog$': '<rootDir>/tests/stubs/PrimeVueDialogStub.js',
+  },
   moduleFileExtensions: ['js', 'vue', 'json'],
   setupFiles: ['<rootDir>/tests/setup.js'],
   testPathIgnorePatterns: ['/node_modules/'],

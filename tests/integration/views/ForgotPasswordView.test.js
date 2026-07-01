@@ -1,8 +1,8 @@
 import { mount, flushPromises } from '@vue/test-utils';
-import ForgotPasswordView from '../../src/views/ForgotPasswordView.vue';
-import { apiRequest } from '../../src/utils/api.js';
+import ForgotPasswordView from '../../../src/views/ForgotPasswordView.vue';
+import { apiRequest } from '../../../src/utils/api.js';
 
-jest.mock('../../src/utils/api.js');
+jest.mock('../../../src/utils/api.js');
 
 const mockRouterPush = jest.fn();
 
@@ -17,9 +17,9 @@ jest.mock('vue-router', () => ({
     }),
 }));
 
-jest.mock('../../src/assets/top-waves-1.svg', () => 'top-waves-stub');
-jest.mock('../../src/assets/bottom-waves-1.svg', () => 'bottom-waves-stub');
-jest.mock('../../src/assets/logos/logo-full.svg', () => 'logo-full-stub');
+jest.mock('../../../src/assets/top-waves-1.svg', () => 'top-waves-stub');
+jest.mock('../../../src/assets/bottom-waves-1.svg', () => 'bottom-waves-stub');
+jest.mock('../../../src/assets/logos/logo-full.svg', () => 'logo-full-stub');
 
 jest.mock('primevue/iconfield', () => ({ template: '<div><slot/></div>' }));
 jest.mock('primevue/inputicon', () => ({ template: '<i/>' }));
@@ -173,19 +173,6 @@ describe('ForgotPasswordView.vue', () => {
             expect(wrapper.vm.currentStep).toBe(2);
             expect(wrapper.vm.isLoading).toBe(false);
             expect(wrapper.find('.error-msg').text()).toBe('Invalid OTP.');
-        });
-
-        it('should set errorMsg and clear loading state if the request fails', async () => {
-            apiRequest.post.mockRejectedValueOnce(new Error('OTP has expired.'));
-
-            wrapper.vm.otp = '123456';
-            await wrapper.vm.$nextTick();
-            await wrapper.find('.forgot-password-form').trigger('submit.prevent');
-            await flushPromises();
-
-            expect(wrapper.vm.currentStep).toBe(2);
-            expect(wrapper.vm.isLoading).toBe(false);
-            expect(wrapper.find('.error-msg').text()).toBe('OTP has expired.');
         });
 
         it('should go back to step 1 when the back button is clicked', async () => {

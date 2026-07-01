@@ -53,6 +53,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { resolveFileUrl } from '../utils/fileUrl';
 
 const props = defineProps({
     request: {
@@ -76,16 +77,7 @@ const props = defineProps({
 defineEmits(['accept']);
 
 const resolvedPfpUrl = computed(() => {
-    const rawUrl = props.request?.requester?.pfpUrl;
-    if (!rawUrl) return null;
-
-    let fileServerUrl = import.meta.env.VITE_FILE_SERVER_URL || '';
-
-    if (fileServerUrl.endsWith('/')) {
-        fileServerUrl = fileServerUrl.slice(0, -1);
-    }
-
-    return `${fileServerUrl}${rawUrl}`;
+    return resolveFileUrl(props.request?.requester?.pfpUrl);
 });
 
 const itemCount = computed(() => {
@@ -271,7 +263,7 @@ const stallStyle = computed(() => {
 }
 
 .pin.dest {
-    color: var(--color-primary);
+    color: var(--theme-blue);
 }
 
 .dotline {
@@ -306,7 +298,7 @@ const stallStyle = computed(() => {
 .item-text {
     font-size: 0.9rem;
     font-weight: 700;
-    color: var(--color-primary);
+    color: var(--theme-blue);
     text-align: right;
     line-height: 1.32;
     white-space: pre-line;
@@ -341,21 +333,22 @@ const stallStyle = computed(() => {
 
 /* ── Own order status ───────────────────────── */
 .own-order-status {
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 11px 0;
+    gap: 5px;
+    padding: 7px 13px;
+    background: rgba(239, 124, 0, 0.1);
+    border: 1px solid rgba(239, 124, 0, 0.25);
+    border-radius: 20px;
     color: var(--color-accent);
-    font-size: 0.72rem;
-    font-weight: 800;
+    font-size: 0.68rem;
+    font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    width: 100%;
-    text-align: center;
+    white-space: nowrap;
 }
 
 .own-order-status i {
-    font-size: 1rem;
+    font-size: 0.75rem;
 }
 </style>

@@ -1,11 +1,11 @@
 import { setActivePinia, createPinia } from 'pinia';
-import { useAuthStore } from '../../src/stores/auth.js';
-import { apiRequest } from '../../src/utils/api.js';
-import router from '../../src/router/index.js';
+import { useAuthStore } from '../../../src/stores/auth.js';
+import { apiRequest } from '../../../src/utils/api.js';
+import router from '../../../src/router/index.js';
 
-jest.mock('../../src/utils/api.js');
+jest.mock('../../../src/utils/api.js');
 
-jest.mock('../../src/router/index.js', () => ({
+jest.mock('../../../src/router/index.js', () => ({
     __esModule: true,
     default: { push: jest.fn() },
 }));

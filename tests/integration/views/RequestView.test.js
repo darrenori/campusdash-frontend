@@ -1,7 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
-import RequestView from '../../src/views/RequestView.vue';
-import { apiRequest } from '../../src/utils/api.js';
+import RequestView from '../../../src/views/RequestView.vue';
+import { apiRequest } from '../../../src/utils/api.js';
 
 //mock
 const mockRouterReplace = jest.fn();
@@ -15,7 +15,7 @@ jest.mock('vue-router', () => ({
     }),
 }));
 
-jest.mock('../../src/router/index.js', () => ({
+jest.mock('../../../src/router/index.js', () => ({
     __esModule: true,
     default: { push: jest.fn(), replace: jest.fn(), beforeEach: jest.fn() },
 }));
@@ -26,28 +26,28 @@ jest.mock('primevue/usetoast', () => ({
 }));
 
 // return fresh mock
-jest.mock('../../src/utils/socket.js', () => ({
+jest.mock('../../../src/utils/socket.js', () => ({
     getSocket: () => ({ on: jest.fn(), off: jest.fn(), emit: jest.fn() }),
 }));
 
-jest.mock('../../src/utils/api.js');
-jest.mock('../../src/assets/logos/logo-square.svg', () => 'logo-stub');
+jest.mock('../../../src/utils/api.js');
+jest.mock('../../../src/assets/logos/logo-square.svg', () => 'logo-stub');
 
 //helper
 const DEFAULT_USER = { id: 1, username: 'tester', points: 5 };
 
 const MOCK_LOCATIONS = [
     { id: 1, name: 'LT28' }, { id: 2, name: 'LT27' }, { id: 3, name: 'LT29' },
-    { id: 4, name: 'LT1' },  { id: 5, name: 'LT13' }, { id: 6, name: 'COM1' },
-    { id: 7, name: 'COM2' }, { id: 8, name: 'AS6' },  { id: 9, name: 'S16' },
+    { id: 4, name: 'LT1' }, { id: 5, name: 'LT13' }, { id: 6, name: 'COM1' },
+    { id: 7, name: 'COM2' }, { id: 8, name: 'AS6' }, { id: 9, name: 'S16' },
     { id: 10, name: 'UTown' },
 ];
 
 function setupApiMocks(activeRequest = null) {
     apiRequest.get.mockImplementation((endpoint) => {
         if (endpoint === '/requests/active') return Promise.resolve({ request: activeRequest });
-        if (endpoint === '/catalog')          return Promise.resolve({ canteens: [] });
-        if (endpoint === '/locations')        return Promise.resolve({ locations: MOCK_LOCATIONS });
+        if (endpoint === '/catalog') return Promise.resolve({ canteens: [] });
+        if (endpoint === '/locations') return Promise.resolve({ locations: MOCK_LOCATIONS });
         return Promise.resolve({});
     });
 }
@@ -123,7 +123,7 @@ describe('RequestView.vue', () => {
             expect(wrapper.find('.form-error').text()).toBe('Please remove links or unsupported characters from your request.');
         });
 
-        
+
         it('calls the API when all validation guards pass', async () => {
             apiRequest.post.mockResolvedValueOnce({
                 request: {
@@ -258,7 +258,7 @@ describe('RequestView.vue', () => {
             await wrapper.find('.cancel-btn.compact').trigger('click');
 
             expect(apiRequest.patch).not.toHaveBeenCalled();
-            expect(wrapper.find('.form-error').text()).toBe('Please add a reason before cancelling.');
+            expect(wrapper.find('.cancel-error').text()).toBe('Please add a reason before cancelling.');
         });
 
         it('calls the cancel API with the provided reason when one is entered', async () => {
@@ -267,8 +267,8 @@ describe('RequestView.vue', () => {
 
             await wrapper.find('.cancel-btn').trigger('click');
 
-            wrapper.vm.cancelReason = 'Running late, cannot make it';
-            await wrapper.vm.$nextTick();
+            const textarea = wrapper.find('.cancel-panel textarea');
+            await textarea.setValue('Running late, cannot make it');
 
             await wrapper.find('.cancel-btn.compact').trigger('click');
             await flushPromises();

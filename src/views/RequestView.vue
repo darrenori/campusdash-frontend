@@ -13,39 +13,26 @@
 
             <!-- Delivery location picker -->
             <div v-if="!activeLoading && !activeRequest" class="location-wrap">
-                <button type="button" class="location-btn" @click="menuOpen = !menuOpen">
+                <span class="location-caption">Deliver to</span>
+                <button type="button" class="location-btn" :class="{ nudge: showLocationNudge }"
+                    @click="toggleLocationMenu">
+                    <i class="pi pi-map-marker location-pin"></i>
                     <span>{{ form.deliveryLocation }}</span>
                     <i class="pi pi-chevron-down chevron" :class="{ rotated: menuOpen }"></i>
                 </button>
 
                 <div v-if="menuOpen" class="location-menu">
-                    <button
-                        v-for="loc in presetLocations"
-                        :key="loc"
-                        type="button"
-                        class="location-option"
-                        :class="{ active: loc === form.deliveryLocation }"
-                        @click="selectLocation(loc)"
-                    >
+                    <button v-for="loc in presetLocations" :key="loc" type="button" class="location-option"
+                        :class="{ active: loc === form.deliveryLocation }" @click="selectLocation(loc)">
                         {{ loc }}
                     </button>
                     <div class="custom-location">
-                        <input
-                            v-model.trim="customLocation"
-                            placeholder="Search location"
-                            @focus="locationError = ''"
-                            @input="locationError = ''"
-                            @blur="validateLocation"
-                        />
+                        <input v-model.trim="customLocation" placeholder="Search location" @focus="locationError = ''"
+                            @input="locationError = ''" @blur="validateLocation" />
                     </div>
                     <div v-if="customLocation && filteredLocations.length" class="location-results">
-                        <button
-                            v-for="loc in filteredLocations"
-                            :key="loc.id"
-                            type="button"
-                            class="location-result"
-                            @click="selectLocation(loc.name)"
-                        >
+                        <button v-for="loc in filteredLocations" :key="loc.id" type="button" class="location-result"
+                            @click="selectLocation(loc.name)">
                             {{ loc.name }}
                         </button>
                     </div>
@@ -72,7 +59,8 @@
                     <span class="step-dot"><i class="pi pi-check"></i></span>
                     <div class="step-copy">
                         <h2>{{ isDeliverer ? 'Delivery Accepted' : 'Request Submitted' }}</h2>
-                        <p>{{ isDeliverer ? `Pick up ${activeRequest.item} from ${activeRequest.canteen}` : `${activeRequest.requester.name} requested for ${activeRequest.item}` }}</p>
+                        <p>{{ isDeliverer ? `Pick up ${activeRequest.item} from ${activeRequest.canteen}` :
+                            `${activeRequest.requester.name} requested for ${activeRequest.item}` }}</p>
                     </div>
                 </div>
 
@@ -84,21 +72,33 @@
                         <span v-else class="search-pulse"></span>
                     </span>
                     <div class="step-copy">
-                        <h2>{{ isDeliverer ? 'Deliver the Order' : (hasRunner ? 'Runner Found' : 'Finding Runner...') }}</h2>
-                        <p>
-                            <template v-if="isDeliverer">
-                                {{ activeRequest.deliveryLocation }}
-                                <span v-if="activeRequest.deliveredAt" class="runner-status online">Delivered</span>
-                            </template>
-                            <template v-else-if="hasRunner">
-                                @{{ runnerName }}
-                                <span class="runner-status" :class="{ online: runnerOnline }">
-                                    {{ runnerOnline ? 'Online' : 'Offline' }}
-                                </span>
-                            </template>
-                            <template v-else>Finding you a nearby runner...</template>
+                        <h2>{{ isDeliverer ? 'Deliver the Order' : (hasRunner ? 'Runner Found' : 'Finding Runner...') }}
+                        </h2>
+                        <p v-if="redirectingToMap">
+                            Redirecting to Dashboard...
                         </p>
-                        <button v-if="hasRunner" type="button" class="complete-btn" :disabled="completing || (isDeliverer && activeRequest.deliveredAt)" @click="isRequester ? completeOrder() : markDelivered()">
+                        <p v-if="isDeliverer">
+                            {{ activeRequest.deliveryLocation }}
+                        </p>
+
+                        <p v-else-if="hasRunner">
+                            @{{ runnerName }}
+                            <span class="runner-status" :class="{ online: runnerOnline }">
+                                {{ runnerOnline ? 'Online' : 'Offline' }}
+                            </span>
+                        </p>
+
+                        <p v-else>
+                            Finding you a nearby runner...
+                        </p>
+
+                        <div v-if="activeRequest.collectedAt" class="pickup-time-row">
+                            <i class="pi pi-shopping-bag"></i>
+                            <span>Order picked up at {{ formatTime(activeRequest.collectedAt) }}</span>
+                        </div>
+                        <button v-if="hasRunner" type="button" class="complete-btn"
+                            :disabled="completing || (isDeliverer && activeRequest.collectedAt)"
+                            @click="isRequester ? completeOrder() : markCollected()">
                             {{ deliveryActionText }}
                         </button>
                     </div>
@@ -107,33 +107,13 @@
 
             <p v-if="error" class="form-error">{{ error }}</p>
 
-            <div v-if="showCancelReason" class="cancel-panel">
-                <div class="cancel-panel-head">
-                    <h3>Cancel delivery?</h3>
-                    <button type="button" class="cancel-close" :disabled="cancelling" @click="closeCancelReason">
-                        <i class="pi pi-times"></i>
-                    </button>
-                </div>
-                <p>Let the other person know what happened.</p>
-                <p v-if="needsCancelReason" class="cancel-penalty">
-                    Since a runner has been matched, you will lose 1 point if you cancel.
-                </p>
-                <textarea
-                    v-model.trim="cancelReason"
-                    rows="3"
-                    placeholder="e.g. I can no longer make it in time"
-                    maxlength="255"
-                    @input="cancelReason = cleanRequestText(cancelReason)"
-                ></textarea>
-                <div class="cancel-actions">
-                    <button type="button" class="keep-btn" :disabled="cancelling" @click="closeCancelReason">Keep Order</button>
-                    <button type="button" class="cancel-btn compact" :disabled="cancelling" @click="cancelOrder">
-                        {{ cancelling ? 'CANCELLING...' : 'CONFIRM CANCEL' }}
-                    </button>
-                </div>
+            <div v-if="showCancelReason" class="cancel-panel-container" @click.self="closeCancelReason">
+                <CancelPanel :needs-cancel-reason="needsCancelReason" :cancelling="cancelling" @cancel="cancelOrder"
+                    @close="closeCancelReason" />
             </div>
 
-            <button v-else-if="canCancelOrder" type="button" class="cancel-btn" :disabled="cancelling" @click="openCancelReason">
+            <button v-else-if="canCancelOrder" type="button" class="cancel-btn" :disabled="cancelling"
+                @click="openCancelReason">
                 {{ cancelling ? 'CANCELLING...' : 'CANCEL ORDER' }}
             </button>
         </section>
@@ -166,39 +146,22 @@
 
             <div class="field">
                 <label for="item">Item</label>
-                <textarea
-                    id="item"
-                    v-model.trim="form.item"
-                    rows="3"
-                    placeholder="Iced Kopi C"
-                    maxlength="255"
-                    @input="form.item = cleanRequestText(form.item)"
-                    required
-                ></textarea>
+                <textarea id="item" v-model.trim="form.item" rows="3" placeholder="Iced Kopi C" maxlength="255"
+                    @input="form.item = cleanRequestText(form.item)" required></textarea>
             </div>
 
             <div class="field">
                 <label for="special">Special Request <span class="label-optional">(optional)</span></label>
-                <textarea
-                    id="special"
-                    v-model.trim="form.specialRequest"
-                    rows="3"
-                    placeholder="Please help me say lesser sugar..."
-                    maxlength="255"
-                    @input="form.specialRequest = cleanRequestText(form.specialRequest)"
-                ></textarea>
+                <textarea id="special" v-model.trim="form.specialRequest" rows="3"
+                    placeholder="Please help me say lesser sugar..." maxlength="255"
+                    @input="form.specialRequest = cleanRequestText(form.specialRequest)"></textarea>
             </div>
 
             <div class="field">
                 <label for="deliveryInfo">Delivery Info <span class="label-optional">(optional)</span></label>
-                <textarea
-                    id="deliveryInfo"
-                    v-model.trim="form.deliveryInfo"
-                    rows="3"
-                    placeholder="e.g. I'm at the second table from the door"
-                    maxlength="255"
-                    @input="form.deliveryInfo = cleanRequestText(form.deliveryInfo)"
-                ></textarea>
+                <textarea id="deliveryInfo" v-model.trim="form.deliveryInfo" rows="3"
+                    placeholder="e.g. I'm at the second table from the door" maxlength="255"
+                    @input="form.deliveryInfo = cleanRequestText(form.deliveryInfo)"></textarea>
             </div>
 
             <p v-if="error" class="form-error">{{ error }}</p>
@@ -213,13 +176,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { apiRequest } from '../utils/api';
 import { getSocket } from '../utils/socket';
 import { useAuthStore } from '../stores/auth';
 import { useRequestStore } from '../stores/requests';
+
+import CancelPanel from '../components/CancelPanel.vue';
 import BottomNav from '../components/BottomNav.vue';
 
 const toast = useToast();
@@ -244,7 +209,10 @@ const form = ref({
     deliveryInfo: '',
 });
 const menuOpen = ref(false);
+const showLocationNudge = ref(false);
 const customLocation = ref('');
+
+const LOCATION_HINT_KEY = 'cd_location_hint_seen';
 const submitting = ref(false);
 const cancelling = ref(false);
 const completing = ref(false);
@@ -254,7 +222,6 @@ const error = ref(null);
 const locationError = ref('');
 const runnerOnline = ref(false);
 const showCancelReason = ref(false);
-const cancelReason = ref('');
 
 const unsupportedTextPattern = /[<>\u0000-\u001F\u007F]|\b(?:https?:\/\/|www\.|javascript:|data:)/i;
 
@@ -289,9 +256,10 @@ const isRequester = computed(() => Number(activeRequest.value?.requester?.id) ==
 const isDeliverer = computed(() => Number(activeRequest.value?.deliverer?.id) === Number(currentUserId.value));
 const needsCancelReason = computed(() => activeRequest.value?.status === 'accepted');
 const canCancelOrder = computed(() => ['open', 'accepted'].includes(activeRequest.value?.status));
+
 const deliveryActionText = computed(() => {
     if (completing.value) return isRequester.value ? 'COMPLETING...' : 'SAVING...';
-    if (isDeliverer.value) return activeRequest.value?.deliveredAt ? 'DELIVERED' : 'I HAVE DELIVERED';
+    if (isDeliverer.value) return activeRequest.value?.collectedAt ? 'ORDER PICKED UP' : 'PICKED UP ORDER';
     return 'COMPLETE ORDER';
 });
 
@@ -347,6 +315,22 @@ async function loadLocations() {
     }
 }
 
+function toggleLocationMenu() {
+    menuOpen.value = !menuOpen.value;
+    if (menuOpen.value) showLocationNudge.value = false;
+}
+
+// One-time pulse on the location button so first-time users notice it's editable
+function primeLocationNudge() {
+    try {
+        if (localStorage.getItem(LOCATION_HINT_KEY)) return;
+        showLocationNudge.value = true;
+        localStorage.setItem(LOCATION_HINT_KEY, '1');
+    } catch (e) {
+        // storage unavailable (e.g. private mode) — skip the nudge
+    }
+}
+
 function selectLocation(loc) {
     form.value.deliveryLocation = loc;
     customLocation.value = '';
@@ -371,6 +355,15 @@ function validateLocation() {
 
 function cleanRequestText(value) {
     return value.replace(/[<>\u0000-\u001F\u007F]/g, '').slice(0, 255);
+}
+
+function formatTime(value) {
+    if (!value) return '';
+
+    return new Date(value).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 }
 
 function validateRequestFields() {
@@ -412,7 +405,7 @@ async function submit() {
         joinOrderRoom(request);
         toast.add({
             severity: 'success',
-            summary: 'order submitted!',
+            summary: 'Order Submitted',
             life: 3000,
         });
     } catch (e) {
@@ -422,31 +415,33 @@ async function submit() {
     }
 }
 
-async function cancelOrder() {
+async function cancelOrder(payload = {}) {
     if (!activeRequest.value || cancelling.value) return;
-    if (needsCancelReason.value && !cancelReason.value.trim()) {
-        error.value = 'Please add a reason before cancelling.';
-        return;
-    }
+
     const hadPenalty = needsCancelReason.value;
     cancelling.value = true;
     error.value = null;
+
     try {
         const { points } = await apiRequest.patch(`/requests/${activeRequest.value.id}/cancel`, {
-            reason: hadPenalty ? cancelReason.value : null,
+            reason: hadPenalty ? payload.reason : null,
         });
+
         if (hadPenalty) {
             authStore.setPoints(points);
         }
+
         activeRequest.value = null;
         requestStore.clearActiveRequest();
         runnerOnline.value = false;
         closeCancelReason();
         router.replace('/');
+
         toast.add({
             severity: 'info',
             summary: 'Order cancelled',
         });
+
         if (!catalog.value.length) loadCatalog();
     } catch (e) {
         error.value = e.message;
@@ -460,13 +455,12 @@ function openCancelReason() {
     if (needsCancelReason.value) {
         showCancelReason.value = true;
     } else {
-        cancelOrder();
+        cancelOrder({ reason: null });
     }
 }
 
 function closeCancelReason() {
     showCancelReason.value = false;
-    cancelReason.value = '';
 }
 
 async function completeOrder() {
@@ -493,18 +487,18 @@ async function completeOrder() {
     }
 }
 
-async function markDelivered() {
+async function markCollected() {
     if (!activeRequest.value || completing.value || !isDeliverer.value) return;
     completing.value = true;
     error.value = null;
     try {
-        const { request } = await apiRequest.patch(`/requests/${activeRequest.value.id}/delivered`, {});
+        const { request } = await apiRequest.patch(`/requests/${activeRequest.value.id}/collected`, {});
         activeRequest.value = request;
         requestStore.setActiveRequest(request);
         toast.add({
             severity: 'success',
-            summary: 'Marked delivered',
-            life: 3000,
+            summary: 'Collected Order',
+            detail: 'The Runner has collected the order.',
         });
     } catch (e) {
         error.value = e.message;
@@ -527,9 +521,11 @@ function onAccepted(payload) {
     requestStore.setActiveRequest(request);
     joinOrderRoom(request);
     checkRunnerPresence(request);
+
+    redirectToMapAfterRunnerFound();
 }
 
-function onDelivered(payload) {
+function onCollected(payload) {
     const request = payload?.request;
     if (!request || request.id !== activeRequest.value?.id) return;
     activeRequest.value = request;
@@ -537,7 +533,7 @@ function onDelivered(payload) {
     if (isRequester.value && request.status !== 'completed') {
         toast.add({
             severity: 'success',
-            summary: 'Your order has been marked as delivered.',
+            summary: 'Your order has been collected.',
         });
     }
 }
@@ -578,13 +574,30 @@ function onPresenceUpdate({ userId, online }) {
     }
 }
 
+// Redirect only when Runner Found while already on this page
+const redirectingToMap = ref(false);
+let redirectTimer = null;
+
+function redirectToMapAfterRunnerFound() {
+    if (redirectTimer) return;
+
+    redirectingToMap.value = true;
+
+    redirectTimer = setTimeout(() => {
+        redirectingToMap.value = false;
+        redirectTimer = null;
+        router.replace('/');
+    }, 3000);
+}
+
 onMounted(() => {
     loadActiveRequest();
     loadCatalog();
     loadLocations();
+    primeLocationNudge();
     socket.on('request:active', onActiveRequest);
     socket.on('request:accepted', onAccepted);
-    socket.on('request:delivered', onDelivered);
+    socket.on('request:collected', onCollected);
     socket.on('request:cancelled', onCancelled);
     socket.on('request:completed', onCompleted);
     socket.on('presence:update', onPresenceUpdate);
@@ -593,10 +606,14 @@ onMounted(() => {
 onUnmounted(() => {
     socket.off('request:active', onActiveRequest);
     socket.off('request:accepted', onAccepted);
-    socket.off('request:delivered', onDelivered);
+    socket.off('request:collected', onCollected);
     socket.off('request:cancelled', onCancelled);
     socket.off('request:completed', onCompleted);
     socket.off('presence:update', onPresenceUpdate);
+
+    if (redirectTimer) {
+        clearTimeout(redirectTimer);
+    }
 });
 </script>
 
@@ -670,22 +687,62 @@ onUnmounted(() => {
     z-index: 20;
 }
 
-.location-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: transparent;
-    border: none;
-    padding: 2px 0;
-    cursor: pointer;
-    color: #ffffff;
-    font-size: 1.5rem;
-    font-weight: 900;
+.location-caption {
+    display: block;
+    margin-bottom: 4px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.72rem;
+    font-weight: 500;
     letter-spacing: 0;
 }
 
+.location-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.18);
+    border: none;
+    border-radius: 980px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.location-btn:hover {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.location-btn:active {
+    transform: scale(0.97);
+}
+
+.location-pin {
+    font-size: 0.82rem;
+}
+
+.location-btn.nudge {
+    animation: locationNudge 1.3s ease-in-out 3;
+}
+
+@keyframes locationNudge {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.14);
+    }
+}
+
 .chevron {
-    font-size: 0.85rem;
+    font-size: 0.62rem;
+    opacity: 0.85;
     transition: transform 0.25s ease;
 }
 
@@ -994,6 +1051,20 @@ onUnmounted(() => {
     background: #0e9f6e;
 }
 
+.pickup-time-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    color: var(--theme-blue);
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.pickup-time-row i {
+    font-size: 0.78rem;
+}
+
 .timeline-line {
     width: 0;
     height: 74px;
@@ -1020,76 +1091,19 @@ onUnmounted(() => {
     animation: searchDots 0.9s ease-in-out infinite;
 }
 
-.cancel-panel {
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 16px;
-    display: grid;
-    gap: 10px;
-    box-shadow: 0 8px 22px rgba(16, 24, 40, 0.08);
-}
-
-.cancel-panel-head {
+.cancel-panel-container {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.35);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: center;
 }
 
-.cancel-panel h3 {
-    margin: 0;
-    color: var(--text-main);
-    font-size: 1rem;
-    font-weight: 900;
-}
-
-.cancel-panel p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    font-weight: 600;
-    line-height: 1.35;
-}
-
-.cancel-penalty {
-    color: var(--color-danger) !important;
-}
-
-.cancel-panel textarea {
-    width: 100%;
-    resize: none;
-    border: 1px solid transparent;
-    border-radius: 14px;
-    padding: 12px 14px;
-    background: var(--bg-card);
-    color: var(--text-main);
-    font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.35;
-}
-
-.cancel-panel textarea:focus {
-    outline: none;
-    border-color: var(--color-danger);
-    box-shadow: 0 0 0 4px rgba(211, 58, 44, 0.12);
-}
-
-.cancel-close {
-    width: 34px;
-    height: 34px;
-    border: none;
-    border-radius: 50%;
-    background: var(--bg-card);
-    color: var(--text-muted);
-    cursor: pointer;
-}
-
-.cancel-actions {
-    display: grid;
-    grid-template-columns: 1fr 1.25fr;
-    gap: 10px;
+.cancel-panel-container :deep(.cancel-panel) {
+    width: min(100%, 480px);
 }
 
 .keep-btn {
@@ -1148,10 +1162,13 @@ onUnmounted(() => {
 }
 
 @keyframes runnerPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow: 0 0 0 0 rgba(36, 71, 131, 0.26);
         transform: scale(1);
     }
+
     50% {
         box-shadow: 0 0 0 10px rgba(36, 71, 131, 0);
         transform: scale(1.04);
@@ -1163,10 +1180,12 @@ onUnmounted(() => {
         opacity: 0.35;
         transform: translateY(-2px);
     }
+
     50% {
         opacity: 1;
         transform: translateY(2px);
     }
+
     100% {
         opacity: 0.35;
         transform: translateY(-2px);
@@ -1174,10 +1193,13 @@ onUnmounted(() => {
 }
 
 @keyframes searchDots {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(0.9);
         opacity: 0.7;
     }
+
     50% {
         transform: scale(1.12);
         opacity: 1;

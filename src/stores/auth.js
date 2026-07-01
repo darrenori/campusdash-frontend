@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { apiRequest } from '../utils/api';
+import { disconnectSocket } from '../utils/socket';
 import router from '../router';
 
 
@@ -25,6 +26,8 @@ export const useAuthStore = defineStore('auth', () => {
             isAuthenticated.value = false;
             user.value = null;
             localStorage.removeItem('userData');
+            // Tear down the realtime connection so no authenticated socket lingers.
+            disconnectSocket();
             router.push('/login');
         }
     }
@@ -43,5 +46,12 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    return { isAuthenticated, user, setLoggedIn, logout, adjustPoints, setPoints };
+    function incrementDeliveries() {
+        if (user.value != null) {
+            user.value = { ...user.value, deliveries_completed: Number(user.value.deliveries_completed ?? 0) + 1 };
+            localStorage.setItem('userData', JSON.stringify(user.value));
+        }
+    }
+
+    return { isAuthenticated, user, setLoggedIn, logout, adjustPoints, setPoints, incrementDeliveries };
 });

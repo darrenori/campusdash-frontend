@@ -1,17 +1,36 @@
 <template>
   <div class="min-h-screen bg-gray-50 font-sans text-gray-900">
     <Toast position="top-right" />
+
+    <AchievementToastListener v-if="authStore.isAuthenticated" :key="authStore.user?.id" />
+
     <router-view />
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useThemeStore } from './stores/theme';
+import { useAuthStore } from './stores/auth';
+import { useMessagesStore } from './stores/messages';
 
 import Toast from 'primevue/toast';
+import AchievementToastListener from './components/AchievementToastListener.vue';
 
 const themeStore = useThemeStore();
+const authStore = useAuthStore();
+const messagesStore = useMessagesStore();
+
+// Keep the realtime messages store bound while authenticated so the unread
+// badge stays live everywhere; reset it on logout.
+watch(
+  () => authStore.isAuthenticated,
+  (authed) => {
+    if (authed) messagesStore.init();
+    else messagesStore.reset();
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   themeStore.initTheme();
@@ -38,7 +57,15 @@ onMounted(() => {
   --text-subtle: rgba(120, 120, 130, 1);
   --border-color: rgba(55, 65, 81, 1);
   --theme-blue: #0065C9;
-  --divider-color: rgba(55, 65, 81, 0.5);
+  --divider-color: rgba(69, 69, 69, 0.5);
+
+  /* DRAWER DARK */
+  --drawer-bg: rgb(45, 45, 45);
+  --info-card: rgb(39, 39, 39);
+  --info-border: rgb(55, 55, 55);
+  --chat-button: rgb(45, 45, 45);
+  --bubble-bg: rgb(56, 56, 56);
+  --drawer-text: #c4c4c4;
 }
 
 /* LIGHT MODE (Default) */
@@ -53,6 +80,14 @@ onMounted(() => {
   --border-color: rgba(229, 231, 235, 1);
   --theme-blue: #003D7C;
   --divider-color: #f1f1f4;
+
+  /* DRAWER LIGHT */
+  --drawer-bg: rgb(255, 255, 255);
+  --info-card: rgb(243, 243, 243);
+  --info-border: lightgray;
+  --chat-button: white;
+  --bubble-bg: white;
+  --drawer-text: #003D7C;
 }
 
 html,
@@ -61,7 +96,9 @@ body {
   padding: 0;
   width: 100%;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
+  overscroll-behavior: none;
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
   background: var(--bg-main);

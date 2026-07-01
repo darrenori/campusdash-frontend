@@ -1,7 +1,20 @@
 import { useAuthStore } from "../stores/auth";
 import router from "../router";
 
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api');
+const normalizeBaseUrl = (url = '') => url.replace(/\/+$/, '');
+const isRelativeUrl = (url) => !/^https?:\/\//i.test(url);
+
+const resolveBaseUrl = () => {
+    const envUrl = import.meta.env.VITE_BACKEND_URL;
+
+    if (import.meta.env.DEV) {
+        return normalizeBaseUrl(envUrl || 'http://localhost:8080/api');
+    }
+
+    return normalizeBaseUrl(envUrl && isRelativeUrl(envUrl) ? envUrl : '/api');
+};
+
+const BASE_URL = resolveBaseUrl();
 
 const parseJsonResponse = async (response) => {
     const body = await response.text();
@@ -102,9 +115,30 @@ export const apiRequest = {
             throw new Error('Session expired. Please log in again.');
         }
 
-        const result = await response.json();
+        const result = await parseJsonResponse(response);
         if (!response.ok) {
-            throw new Error(result.error || 'API request failed');
+            throw new Error(result?.error || `API request failed (${response.status})`);
+        }
+
+        return result;
+    },
+
+    async delete(endpoint) {
+        const response = await fetch(`${BASE_URL}${endpoint}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (response.status === 401) {
+            const authStore = useAuthStore();
+            await authStore.logout();
+            router.push('/login');
+            throw new Error('Session expired. Please log in again.');
+        }
+
+        const result = await parseJsonResponse(response);
+        if (!response.ok) {
+            throw new Error(result?.error || `API request failed (${response.status})`);
         }
 
         return result;
@@ -126,9 +160,9 @@ export const apiRequest = {
             throw new Error('Session expired. Please log in again.');
         }
 
-        const result = await response.json();
+        const result = await parseJsonResponse(response);
         if (!response.ok) {
-            throw new Error(result.error || 'API request failed');
+            throw new Error(result?.error || `API request failed (${response.status})`);
         }
 
         return result;

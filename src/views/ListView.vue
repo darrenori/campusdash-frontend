@@ -22,7 +22,7 @@
                     <i class="pi pi-inbox"></i>
                 </div>
                 <h3 class="empty-title">Nothing available yet!</h3>
-                <p class="empty-sub">Check again later — new requests pop up here in real time.</p>
+                <p class="empty-sub">Check again later! New requests pop up here in real time.</p>
             </div>
 
             <DeliveryRequestCard v-for="request in filteredRequests" :key="request.id" :request="request"
@@ -37,7 +37,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import DeliveryRequestCard from './DeliveryRequestCard.vue';
+import DeliveryRequestCard from '../components/DeliveryRequestCard.vue';
 
 const props = defineProps({
     requests: { type: Array, required: true },
@@ -60,8 +60,8 @@ const tabs = computed(() => {
     const count = filteredRequests.value.length || null;
     return [
         { key: 'nearby', label: 'Nearby Me', badge: count },
-        { key: 'recent', label: 'Recent', badge: count },
-        { key: 'next-class', label: 'Next Class', badge: null },
+        { key: 'recent', label: 'Recent (WIP)', badge: count },
+        { key: 'next-class', label: 'Next Class (WIP)', badge: null },
     ];
 });
 </script>
