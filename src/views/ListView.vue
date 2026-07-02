@@ -12,12 +12,30 @@
             </div>
         </div>
 
+        <!-- Next class banner -->
+        <div v-if="showNextClassBanner" class="next-class-banner">
+            <i class="pi pi-map-marker banner-pin"></i>
+            <div class="banner-text">
+                <span class="banner-label">Orders on your way to</span>
+                <span class="banner-venue">{{ nextClass.venue || nextClass.venueCode }}</span>
+            </div>
+            <span class="banner-meta">{{ nextClass.moduleCode }}</span>
+        </div>
+
         <!-- Cards -->
         <div class="cards-scroll-area">
             <p v-if="loading" class="list-state">Loading requests…</p>
             <p v-else-if="error" class="list-state error">{{ error }}</p>
 
-            <div v-else-if="filteredRequests.length === 0" class="empty-state">
+            <div v-else-if="activeTab === 'next-class' && !nextClass && !myRequest" class="empty-state">
+                <div class="empty-icon">
+                    <i class="pi pi-calendar"></i>
+                </div>
+                <h3 class="empty-title">No timetable yet</h3>
+                <p class="empty-sub">Add your NUSMods timetable in your Profile to see orders heading your way.</p>
+            </div>
+
+            <div v-else-if="displayedRequests.length === 0" class="empty-state">
                 <div class="empty-icon">
                     <i class="pi pi-inbox"></i>
                 </div>
@@ -25,7 +43,7 @@
                 <p class="empty-sub">Check again later! New requests pop up here in real time.</p>
             </div>
 
-            <DeliveryRequestCard v-for="request in filteredRequests" :key="request.id" :request="request"
+            <DeliveryRequestCard v-for="request in displayedRequests" :key="request.id" :request="request"
                 :requester-online="onlineUserIds.has(Number(request.requester.id))"
                 :accepting="acceptingId === request.id" :is-own="!!myRequest"
                 @accept="$emit('accept-request', $event)" />
@@ -38,6 +56,8 @@
 <script setup>
 import { ref, computed } from 'vue';
 import DeliveryRequestCard from '../components/DeliveryRequestCard.vue';
+import { useAuthStore } from '../stores/auth';
+import { timetableLessons, computeNextLocation, distanceMeters } from '../utils/timetable';
 
 const props = defineProps({
     requests: { type: Array, required: true },
@@ -51,17 +71,44 @@ const props = defineProps({
 defineEmits(['accept-request']);
 
 const activeTab = ref('nearby');
+const authStore = useAuthStore();
 
-const filteredRequests = computed(() =>
+//where the runner's headed next, from their saved timetable
+const nextClass = computed(() => {
+    const lessons = timetableLessons(authStore.user);
+    return lessons ? computeNextLocation(lessons) : null;
+});
+
+const baseRequests = computed(() =>
     props.myRequest ? [props.myRequest] : props.requests
 );
 
+//sort orders by how close the drop-off is to the next class, so the ones on
+//the way show first. falls back to normal order if we've got no coords for it.
+const nextClassRequests = computed(() => {
+    const target = nextClass.value?.coords;
+    if (!target) return baseRequests.value;
+
+    return [...baseRequests.value].sort(
+        (a, b) => distanceMeters(a.deliveryCoords, target) - distanceMeters(b.deliveryCoords, target)
+    );
+});
+
+const displayedRequests = computed(() => {
+    if (props.myRequest) return baseRequests.value;
+    return activeTab.value === 'next-class' ? nextClassRequests.value : baseRequests.value;
+});
+
+const showNextClassBanner = computed(() =>
+    activeTab.value === 'next-class' && !!nextClass.value && !props.myRequest && !props.loading
+);
+
 const tabs = computed(() => {
-    const count = filteredRequests.value.length || null;
+    const count = baseRequests.value.length || null;
     return [
         { key: 'nearby', label: 'Nearby Me', badge: count },
         { key: 'recent', label: 'Recent (WIP)', badge: count },
-        { key: 'next-class', label: 'Next Class (WIP)', badge: null },
+        { key: 'next-class', label: 'Next Class', badge: nextClass.value ? count : null },
     ];
 });
 </script>
@@ -119,6 +166,56 @@ const tabs = computed(() => {
     min-width: 18px;
     text-align: center;
     line-height: 1.6;
+}
+
+/* ── Next class banner ───────────────────────── */
+.next-class-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 14px 20px 0;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    flex-shrink: 0;
+}
+
+.banner-pin {
+    font-size: 1.05rem;
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+.banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.banner-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.banner-venue {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--theme-blue);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.banner-meta {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    flex-shrink: 0;
 }
 
 /* ── Scrollable card area ────────────────────── */
