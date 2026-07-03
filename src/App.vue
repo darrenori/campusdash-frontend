@@ -3,6 +3,7 @@
     <Toast position="top-right" />
 
     <AchievementToastListener v-if="authStore.isAuthenticated" :key="authStore.user?.id" />
+    <NotificationsListener v-if="authStore.isAuthenticated" :key="`notif-${authStore.user?.id}`" />
 
     <router-view />
   </div>
@@ -13,21 +14,29 @@ import { onMounted, watch } from 'vue';
 import { useThemeStore } from './stores/theme';
 import { useAuthStore } from './stores/auth';
 import { useMessagesStore } from './stores/messages';
+import { useNotificationsStore } from './stores/notifications';
 
 import Toast from 'primevue/toast';
 import AchievementToastListener from './components/AchievementToastListener.vue';
+import NotificationsListener from './components/NotificationsListener.vue';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 const messagesStore = useMessagesStore();
+const notificationsStore = useNotificationsStore();
 
 // Keep the realtime messages store bound while authenticated so the unread
 // badge stays live everywhere; reset it on logout.
 watch(
   () => authStore.isAuthenticated,
   (authed) => {
-    if (authed) messagesStore.init();
-    else messagesStore.reset();
+    if (authed) {
+      messagesStore.init();
+      notificationsStore.init();
+    } else {
+      messagesStore.reset();
+      notificationsStore.reset();
+    }
   },
   { immediate: true }
 );
