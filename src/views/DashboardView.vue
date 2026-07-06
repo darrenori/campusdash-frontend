@@ -24,6 +24,16 @@
             <span>Request</span>
         </button>
 
+        <div v-if="showDevSeedControls" class="seed-controls">
+            <button v-if="!devSeeded" type="button" class="seed-btn" :disabled="seedingRequests"
+                @click="seedDevRequests">
+                {{ seedingRequests ? '...' : 'SEED' }}
+            </button>
+            <button v-else type="button" class="seed-btn" :disabled="seedingRequests" @click="clearDevRequests">
+                {{ seedingRequests ? '...' : 'CLEAR' }}
+            </button>
+        </div>
+
         <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest" :active="!!myRequest"
             :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" :cancelling="cancelling"
             :completing="completing" :runner-online="runnerOnline" @accept="acceptRequest" @cancel="handleDrawerCancel"
@@ -65,6 +75,14 @@ const loading = ref(true);
 const error = ref(null);
 const acceptingId = ref(null);
 const onlineUserIds = ref(new Set());
+const devSeeded = ref(false);
+const seedingRequests = ref(false);
+
+const showDevSeedControls = computed(() => (
+    import.meta.env.DEV
+    && !loading.value
+    && !myRequest.value
+));
 
 async function loadRequests() {
     try {
@@ -86,6 +104,7 @@ async function loadRequests() {
 
 async function acceptRequest(id) {
     if (acceptingId.value) return;
+
     acceptingId.value = id;
     try {
         const { request } = await apiRequest.patch(`/requests/${id}/accept`, {});
@@ -98,6 +117,41 @@ async function acceptRequest(id) {
         loadRequests();
     } finally {
         acceptingId.value = null;
+    }
+}
+
+async function seedDevRequests() {
+    if (seedingRequests.value) return;
+
+    seedingRequests.value = true;
+    error.value = null;
+
+    try {
+        await apiRequest.post('/requests/dev/route-matching-seeds', {});
+        devSeeded.value = true;
+        await loadRequests();
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        seedingRequests.value = false;
+    }
+}
+
+async function clearDevRequests() {
+    if (seedingRequests.value) return;
+
+    seedingRequests.value = true;
+    error.value = null;
+
+    try {
+        await apiRequest.delete('/requests/dev/route-matching-seeds');
+        devSeeded.value = false;
+        selectedMapRequest.value = null;
+        await loadRequests();
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        seedingRequests.value = false;
     }
 }
 
@@ -486,5 +540,24 @@ onUnmounted(() => {
 .request-icon {
     font-size: 1.4rem;
     line-height: 1;
+}
+
+/* SEED BUTTONS */
+.seed-controls {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    z-index: 900;
+}
+
+.seed-btn {
+    min-width: 58px;
+    padding: 9px 13px;
+    cursor: pointer;
+}
+
+.seed-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
 </style>
