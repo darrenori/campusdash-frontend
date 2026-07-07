@@ -21,6 +21,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
   const permission = ref(notificationPermission());
   const pushEnabled = ref(false); //this specific device is subscribed
   const busy = ref(false); //enable/disable request in flight
+  const lastError = ref(''); //why the most recent enable attempt failed, for the UI
 
   let socket = null;
   let bound = false;
@@ -115,10 +116,14 @@ export const useNotificationsStore = defineStore('notifications', () => {
   async function enable() {
     if (busy.value) return permission.value;
     busy.value = true;
+    lastError.value = '';
     try {
       const result = await enablePush();
       await refreshPushState();
       return result;
+    } catch (err) {
+      lastError.value = `${err.name || 'Error'}: ${err.message || err}`;
+      return 'error';
     } finally {
       busy.value = false;
     }
@@ -145,6 +150,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     permission,
     pushEnabled,
     busy,
+    lastError,
     init,
     teardown,
     reset,

@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import basicSsl from '@vitejs/plugin-basic-ssl';
+import mkcert from 'vite-plugin-mkcert';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -10,7 +10,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       vue(),
-      mode === 'development' ? basicSsl() : null,
+      //locally-trusted https via mkcert so chrome runs the service worker. a
+      //self-signed cert fails the ssl check on the sw script fetch and push dies.
+      //the actual one uses digital ocean, this only for testing :)
+      mode === 'development' ? mkcert({ hosts: ['localhost', '127.0.0.1'] }) : null,
     ].filter(Boolean),
 
     server: {

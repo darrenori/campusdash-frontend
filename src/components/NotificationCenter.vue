@@ -94,12 +94,14 @@
 <script setup>
 import { computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
 import { useNotificationsStore } from '../stores/notifications';
 
 const visible = defineModel('visible', { default: false });
 
 const store = useNotificationsStore();
 const router = useRouter();
+const toast = useToast();
 
 const showEnable = computed(() => store.supported && store.permission !== 'granted');
 
@@ -109,7 +111,7 @@ const showToggle = computed(() => store.supported && store.permission === 'grant
 
 const enableHint = computed(() => {
   if (store.permission === 'denied') return 'Blocked — re-enable in your browser settings.';
-  return 'Get pinged when an order moves or a message lands.';
+  return 'Get order updates and messages, even when CampusDash is closed.';
 });
 
 //load lazily the first time the sheet is opened, and re-check this device's push
@@ -125,12 +127,31 @@ function close() {
 }
 
 async function enable() {
-  await store.enable();
+  await runEnable();
 }
 
-function togglePush() {
-  if (store.pushEnabled) store.disable();
-  else store.enable();
+async function togglePush() {
+  if (store.pushEnabled) {
+    await store.disable();
+    return;
+  }
+  await runEnable();
+}
+
+async function runEnable() {
+  const result = await store.enable();
+  if (result === 'granted' && store.pushEnabled) {
+    toast.add({ severity: 'success', summary: 'Notifications on', detail: 'This device will get push alerts.', life: 3000 });
+  } else if (result === 'denied') {
+    toast.add({ severity: 'warn', summary: 'Notifications blocked', detail: 'Allow notifications for this site in your browser settings.', life: 5000 });
+  } else {
+    toast.add({
+      severity: 'warn',
+      summary: 'Push not available here',
+      detail: `${store.lastError || 'This device could not subscribe.'} Chrome needs a trusted origin — try https://localhost:5173.`,
+      life: 9000,
+    });
+  }
 }
 
 const TYPE_ICONS = {
@@ -306,28 +327,27 @@ function relTime(iso) {
 .nc-body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 0 10px;
+  padding: 0 12px;
 }
 
 .nc-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 2px 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .nc-item {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 13px 12px;
-  border-radius: 16px;
+  padding: 10px 12px;
+  border-radius: 14px;
   cursor: pointer;
   transition: background 0.18s ease;
-}
-
-.nc-item + .nc-item {
-  border-top: 1px solid var(--divider-color);
 }
 
 .nc-item:active {
@@ -404,7 +424,6 @@ function relTime(iso) {
   height: 9px;
   border-radius: 50%;
   background: var(--theme-blue);
-  margin-top: 6px;
 }
 
 .nc-more {
