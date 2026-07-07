@@ -5,6 +5,18 @@
             :keyboard-shortcuts="false" :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'"
             @click="$emit('map-click')">
 
+            <div v-if="!myRequest" class="map-filter-controls">
+                <button v-for="option in filterOptions" :key="option.key" type="button" class="map-filter-btn"
+                    :class="{ active: filterMode === option.key }"
+                    @click.stop="$emit('update-filter-mode', option.key)">
+                    <span>{{ option.label }}</span>
+                    <span v-if="option.badge != null" class="map-filter-badge">{{ option.badge }}</span>
+                </button>
+                <span v-if="filterMode === 'next-class' && !locationAvailable" class="map-filter-hint">
+                    Waiting for GPS
+                </span>
+            </div>
+
             <div v-if="myRequest" class="map-center-controls">
                 <button type="button" class="center-location-btn" :class="isBuyer ? 'own-location' : 'other-location'"
                     :disabled="!buyerCurrentLocation" @click.stop="centerOnLocation(buyerCurrentLocation)">
@@ -20,7 +32,7 @@
             <div v-if="!myRequest">
                 <AdvancedMarker v-for="request in requests" :key="request.id" :options="{
                     position: request.deliveryCoords,
-                    title: request.deliveryLocation
+                    title: `${request.canteen} to ${request.deliveryLocation}`
                 }" :pin-options="{
                     background: '#d33a2c',
                     borderColor: '#b91c1c',
@@ -80,21 +92,25 @@ const props = defineProps({
         type: Object,
         default: null
     },
-    acceptingId: {
-        type: [Number, String],
-        default: null
-    },
-    onlineUserIds: {
-        type: Object,
-        required: true
-    },
     currentUserId: {
         type: [Number, String],
         default: null
-    }
+    },
+    filterMode: {
+        type: String,
+        default: 'all'
+    },
+    filterOptions: {
+        type: Array,
+        required: true
+    },
+    locationAvailable: {
+        type: Boolean,
+        default: false
+    },
 });
 
-defineEmits(['select-request', 'map-click']);
+defineEmits(['select-request', 'map-click', 'update-filter-mode']);
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
@@ -432,6 +448,68 @@ onUnmounted(() => {
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
     position: relative;
     transform: translate(-50%, -50%);
+}
+
+.map-filter-controls {
+    position: absolute;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: calc(100% - 32px);
+    overflow-x: auto;
+    pointer-events: auto;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(0, 61, 124, 0.08);
+}
+
+.map-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 8px 14px;
+    background: transparent;
+    color: var(--theme-blue);
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.map-filter-btn.active {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+
+.map-filter-badge {
+    min-width: 18px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--color-accent);
+    color: #ffffff;
+    font-size: 0.65rem;
+    line-height: 1.55;
+    text-align: center;
+}
+
+.map-filter-hint {
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: rgba(0, 61, 124, 0.08);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
 }
 
 .own-location {

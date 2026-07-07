@@ -38,6 +38,9 @@
             </div>
 
             <div class="order">
+                <span v-if="request.routeMatch" class="route-match">
+                    +{{ request.routeMatch.detourMeters }}m to {{ request.routeMatch.destinationCode }}
+                </span>
                 <span class="item-text">{{ request.item }}</span>
                 <button v-if="!isOwn" class="accept-btn" :disabled="accepting" @click="$emit('accept', request.id)">
                     {{ accepting ? 'ACCEPTING…' : 'ACCEPT' }}
@@ -302,6 +305,17 @@ const stallStyle = computed(() => {
     text-align: right;
     line-height: 1.32;
     white-space: pre-line;
+}
+
+.route-match {
+    align-self: flex-end;
+    border-radius: 999px;
+    padding: 5px 8px;
+    background: rgba(14, 159, 110, 0.1);
+    color: #0e9f6e;
+    font-size: 0.66rem;
+    font-weight: 900;
+    white-space: nowrap;
 }
 
 /* ── Accept button ──────────────────────────── */

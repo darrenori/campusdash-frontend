@@ -4,12 +4,15 @@
         <!-- Sub-tabs -->
         <div class="list-header">
             <div class="sub-tabs">
-                <button v-for="tab in tabs" :key="tab.key" class="sub-tab" :class="{ active: activeTab === tab.key }"
-                    @click="activeTab = tab.key">
+                <button v-for="tab in filterOptions" :key="tab.key" class="sub-tab"
+                    :class="{ active: filterMode === tab.key }" @click="$emit('update-filter-mode', tab.key)">
                     <span class="tab-label">{{ tab.label }}</span>
                     <span v-if="tab.badge != null" class="tab-badge">{{ tab.badge }}</span>
                 </button>
             </div>
+            <p v-if="filterMode === 'next-class' && !locationAvailable" class="filter-hint">
+                Waiting for your location to match requests.
+            </p>
         </div>
 
         <!-- Cards -->
@@ -17,7 +20,7 @@
             <p v-if="loading" class="list-state">Loading requests…</p>
             <p v-else-if="error" class="list-state error">{{ error }}</p>
 
-            <div v-else-if="filteredRequests.length === 0" class="empty-state">
+            <div v-else-if="visibleRequests.length === 0" class="empty-state">
                 <div class="empty-icon">
                     <i class="pi pi-inbox"></i>
                 </div>
@@ -25,7 +28,7 @@
                 <p class="empty-sub">Check again later! New requests pop up here in real time.</p>
             </div>
 
-            <DeliveryRequestCard v-for="request in filteredRequests" :key="request.id" :request="request"
+            <DeliveryRequestCard v-for="request in visibleRequests" :key="request.id" :request="request"
                 :requester-online="onlineUserIds.has(Number(request.requester.id))"
                 :accepting="acceptingId === request.id" :is-own="!!myRequest"
                 @accept="$emit('accept-request', $event)" />
@@ -36,7 +39,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import DeliveryRequestCard from '../components/DeliveryRequestCard.vue';
 
 const props = defineProps({
@@ -45,25 +48,20 @@ const props = defineProps({
     loading: { type: Boolean, required: true },
     error: { type: String, default: null },
     acceptingId: { type: [Number, String], default: null },
-    onlineUserIds: { type: Object, required: true } // Expects a SET
+    onlineUserIds: { type: Object, required: true }, // Expects a SET
+    filterMode: { type: String, default: 'all' },
+    filterOptions: {
+        type: Array,
+        required: true,
+    },
+    locationAvailable: { type: Boolean, default: false },
 });
 
-defineEmits(['accept-request']);
+defineEmits(['accept-request', 'update-filter-mode']);
 
-const activeTab = ref('nearby');
-
-const filteredRequests = computed(() =>
+const visibleRequests = computed(() =>
     props.myRequest ? [props.myRequest] : props.requests
 );
-
-const tabs = computed(() => {
-    const count = filteredRequests.value.length || null;
-    return [
-        { key: 'nearby', label: 'Nearby Me', badge: count },
-        { key: 'recent', label: 'Recent (WIP)', badge: count },
-        { key: 'next-class', label: 'Next Class (WIP)', badge: null },
-    ];
-});
 </script>
 
 <style scoped>
@@ -119,6 +117,13 @@ const tabs = computed(() => {
     min-width: 18px;
     text-align: center;
     line-height: 1.6;
+}
+
+.filter-hint {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
 }
 
 /* ── Scrollable card area ────────────────────── */

@@ -229,9 +229,11 @@ function mountMap({
         props: {
             requests,
             myRequest,
-            acceptingId: null,
-            onlineUserIds: new Set(),
             currentUserId,
+            filterOptions: [
+                { key: 'all', label: 'All', badge: requests.length || null },
+                { key: 'next-class', label: 'Next Class', badge: null },
+            ],
             ...props,
         },
         global: {
@@ -283,8 +285,8 @@ describe('MapView.vue', () => {
             const markers = wrapper.findAll('.advanced-marker-stub');
 
             expect(markers).toHaveLength(2);
-            expect(markers[0].attributes('data-title')).toBe('LT28');
-            expect(markers[1].attributes('data-title')).toBe('The Deck');
+            expect(markers[0].attributes('data-title')).toBe('Frontier to LT28');
+            expect(markers[1].attributes('data-title')).toBe('Techno Edge to The Deck');
         });
 
         it('emits select-request when an open order marker is clicked', async () => {
@@ -840,8 +842,8 @@ describe('MapView.vue', () => {
             const markers = wrapper.findAll('.advanced-marker-stub');
 
             expect(markers).toHaveLength(2);
-            expect(markers[0].attributes('data-title')).toBe('LT28');
-            expect(markers[1].attributes('data-title')).toBe('The Deck');
+            expect(markers[0].attributes('data-title')).toBe('Frontier to LT28');
+            expect(markers[1].attributes('data-title')).toBe('Techno Edge to The Deck');
         });
     });
 });
