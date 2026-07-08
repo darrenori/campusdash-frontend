@@ -28,3 +28,12 @@ app.use(ToastService);
 app.use(pinia);
 app.use(router);
 app.mount('#app');
+
+//register the push service worker up front so tapped notifications can focus
+//the app and so an existing subscription is discoverable. Registration alone
+//prompts nothing — permission is only ever asked when the user opts in.
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
