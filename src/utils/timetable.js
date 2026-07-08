@@ -27,12 +27,12 @@ const LESSON_TYPE_ABBREV = {
     'Workshop': 'WS',
 };
 
-//nus acad year rolls over in august
-export const getAcadYear = (date = new Date()) => {
-    const year = date.getFullYear();
-    const startYear = date.getMonth() + 1 >= 8 ? year : year - 1;
-    return `${startYear}-${startYear + 1}`;
-};
+//pinned to the acad year nusmods is currently serving, same as nusmods pins it
+//in their own config. bump this each year when the new AY data goes live rather
+//than trusting the device clock (which can be wrong).
+const CURRENT_ACAD_YEAR = '2026-2027';
+
+export const getAcadYear = () => CURRENT_ACAD_YEAR;
 
 //"1400" to 840 mins, or null if it's junk
 const timeToMinutes = (value) => {
@@ -78,10 +78,19 @@ export const parseShareUrl = (rawUrl) => {
     }
     const semester = Number(semMatch[1]);
 
+    //modules the user hid in nusmods come through as hidden=CODE1,CODE2 — skip them
+    const hidden = new Set(
+        url.searchParams.getAll('hidden')
+            .flatMap((value) => value.split(','))
+            .map((code) => code.trim().toUpperCase())
+            .filter(Boolean)
+    );
+
     const modules = [];
     for (const [rawCode, rawValue] of url.searchParams.entries()) {
         const code = rawCode.trim().toUpperCase();
         if (!MODULE_CODE_PATTERN.test(code)) continue;
+        if (hidden.has(code)) continue;
         if (modules.some((m) => m.code === code)) continue;
 
         const selections = [];
