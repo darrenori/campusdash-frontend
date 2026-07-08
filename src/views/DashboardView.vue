@@ -15,8 +15,7 @@
             <MapView v-if="viewMode === 'map'" :requests="visibleRequests" :my-request="myRequest"
                 :current-user-id="authStore.user?.id" :filter-mode="filterMode"
                 :filter-options="requestFilterOptions" :location-available="filterLocationAvailable"
-                @update-filter-mode="filterMode = $event" @select-request="openRequestDrawer"
-                @map-click="closeRequestDrawer" />
+                @update-filter-mode="filterMode = $event" @select-request="openRequestDrawer" />
             <ListView v-else :requests="visibleRequests" :my-request="myRequest" :loading="loading" :error="error"
                 :accepting-id="acceptingId" :online-user-ids="onlineUserIds" :filter-mode="filterMode"
                 :filter-options="requestFilterOptions" :location-available="filterLocationAvailable"
@@ -38,10 +37,12 @@
             </button>
         </div>
 
-        <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest" :active="!!myRequest"
+        <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest"
+            :destination-requests="drawerDestinationRequests" :active="!!myRequest"
             :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" :cancelling="cancelling"
             :completing="completing" :runner-online="runnerOnline" @accept="acceptRequest" @cancel="handleDrawerCancel"
-            @complete="completeOrder" @collected="markCollected" @chat="openChat" />
+            @complete="completeOrder" @collected="markCollected" @chat="openChat"
+            @select-request="openRequestDrawer" />
 
         <BottomNav />
 
@@ -402,14 +403,28 @@ const drawerVisible = computed(() => {
     return Boolean(drawerRequest.value);
 });
 
-function openRequestDrawer(request) {
-    selectedMapRequest.value = request;
+function isSameDestination(left, right) {
+    if (!left || !right) return false;
+    if (left.deliveryLocationId && right.deliveryLocationId) {
+        return Number(left.deliveryLocationId) === Number(right.deliveryLocationId);
+    }
+
+    if (left.deliveryLocation && right.deliveryLocation) {
+        return left.deliveryLocation === right.deliveryLocation;
+    }
+
+    return left.deliveryCoords?.lat === right.deliveryCoords?.lat
+        && left.deliveryCoords?.lng === right.deliveryCoords?.lng;
 }
 
-function closeRequestDrawer() {
-    if (myRequest.value) return;
+const drawerDestinationRequests = computed(() => {
+    if (!drawerRequest.value || myRequest.value) return drawerRequest.value ? [drawerRequest.value] : [];
 
-    selectedMapRequest.value = null;
+    return visibleRequests.value.filter((request) => isSameDestination(request, drawerRequest.value));
+});
+
+function openRequestDrawer(request) {
+    selectedMapRequest.value = request;
 }
 
 function startDashboardLocationTracking() {
