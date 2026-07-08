@@ -7,7 +7,7 @@
             </button>
 
             <!-- Unexpanded Drawer -->
-            <div class="drawer-header">
+            <div class="drawer-header" @pointerdown="startCollapsedOrderSwipe">
                 <div class="requester-block">
                     <div class="pfp-wrapper">
                         <div class="pfp">
@@ -45,6 +45,23 @@
                     :cancelling="cancelling" @cancel="cancelOrder" @close="closeCancelReason" />
 
                 <div v-else class="info-card">
+                    <!-- For overlapped orders -->
+                    <div v-if="showDestinationSwitcher" class="order-switcher-row">
+                        <button type="button" class="order-switcher-btn" aria-label="Previous order"
+                            @click.stop="selectNearbyRequest(-1)">
+                            <i class="pi pi-chevron-left"></i>
+                        </button>
+
+                        <span class="order-switcher-label">
+                            Order {{ currentDestinationRequestIndex + 1 }} of {{ destinationRequestOptions.length }}
+                        </span>
+
+                        <button type="button" class="order-switcher-btn" aria-label="Next order"
+                            @click.stop="selectNearbyRequest(1)">
+                            <i class="pi pi-chevron-right"></i>
+                        </button>
+                    </div>
+
                     <div class="info-row">
                         <div class="info-label">
                             <span class="info-icon-bubble">
@@ -56,6 +73,18 @@
                             {{ justCopied === paddedOrderId ? 'Copied!' : paddedOrderId }}
                             <i class="pi pi-copy copy-icon"></i>
                         </button>
+                    </div>
+
+                    <div class="info-row route-info-row">
+                        <div class="info-label">
+                            <span class="info-icon-bubble">
+                                <i class="pi pi-map-marker"></i>
+                            </span>
+                            <span>Route</span>
+                        </div>
+                        <div class="info-value route-value">
+                            {{ routeDisplay }}
+                        </div>
                     </div>
 
                     <div class="info-row clickable-info-row" @click="openUserProfileDialog(request.requester?.name)">
@@ -167,6 +196,10 @@ const props = defineProps({
         type: Object,
         default: null
     },
+    destinationRequests: {
+        type: Array,
+        default: () => []
+    },
     accepting: {
         type: Boolean,
         default: false
@@ -189,7 +222,7 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['accept', 'cancel', 'complete', 'collected', 'chat']);
+const emit = defineEmits(['accept', 'cancel', 'complete', 'collected', 'chat', 'select-request']);
 
 const showUserProfileDialog = ref(false);
 const selectedProfileUsername = ref('');
@@ -243,10 +276,18 @@ function cancelOrder(payload = {}) {
 watch(
     () => props.request?.id,
     () => {
-        isExpanded.value = false;
         closeCancelReason();
         justCopied.value = null;
         showUserProfileDialog.value = false;
+    }
+);
+
+watch(
+    () => props.visible,
+    (visible) => {
+        if (visible) return;
+
+        isExpanded.value = false;
     }
 );
 
@@ -320,6 +361,32 @@ const stallDisplay = computed(() => {
     return '-';
 });
 
+const routeDisplay = computed(() => {
+    const destination = props.request?.deliveryLocation || '-';
+    return `${stallDisplay.value} -> ${destination}`;
+});
+
+const destinationRequestOptions = computed(() => {
+    if (props.destinationRequests?.length) return props.destinationRequests;
+    return props.request ? [props.request] : [];
+});
+
+const currentDestinationRequestIndex = computed(() => {
+    const index = destinationRequestOptions.value.findIndex((option) => option.id === props.request?.id);
+    return index >= 0 ? index : 0;
+});
+
+const showDestinationSwitcher = computed(() => destinationRequestOptions.value.length > 1);
+
+function selectNearbyRequest(direction) {
+    if (!showDestinationSwitcher.value) return;
+
+    const options = destinationRequestOptions.value;
+    const nextIndex = (currentDestinationRequestIndex.value + direction + options.length) % options.length;
+
+    emit('select-request', options[nextIndex]);
+}
+
 const resolvedPfpUrl = computed(() => {
     return resolveFileUrl(props.request?.requester?.pfpUrl);
 });
@@ -331,6 +398,8 @@ const dragStartHeight = ref(null);
 const dragHeight = ref(null);
 const didDrag = ref(false);
 const isDragging = ref(false);
+const collapsedSwipeStartX = ref(null);
+const collapsedSwipeStartY = ref(null);
 
 const drawerDragStyle = computed(() => {
     if (dragHeight.value === null) return {};
@@ -343,6 +412,10 @@ const drawerDragStyle = computed(() => {
 
 const COLLAPSED_DRAWER_HEIGHT = 105;
 const EXPANDED_DRAWER_HEIGHT = 600;
+const DRAG_INTENT_THRESHOLD = 4;
+const DRAWER_SNAP_THRESHOLD = 40;
+const ORDER_SWIPE_THRESHOLD = 45;
+const ORDER_SWIPE_HORIZONTAL_RATIO = 1.2;
 
 function getExpandedDrawerHeight() {
     return window.innerWidth <= 600
@@ -372,7 +445,7 @@ function onDrag(event) {
 
     const deltaY = dragStartY.value - event.clientY;
 
-    if (Math.abs(deltaY) > 4) {
+    if (Math.abs(deltaY) > DRAG_INTENT_THRESHOLD) {
         didDrag.value = true;
     }
 
@@ -391,9 +464,9 @@ function endDrag(event) {
 
         if (!didDrag.value) {
             isExpanded.value = !isExpanded.value;
-        } else if (dragDistance > 40) {
+        } else if (dragDistance > DRAWER_SNAP_THRESHOLD) {
             isExpanded.value = true;
-        } else if (dragDistance < -40) {
+        } else if (dragDistance < -DRAWER_SNAP_THRESHOLD) {
             isExpanded.value = false;
         }
     }
@@ -405,8 +478,36 @@ function endDrag(event) {
     isDragging.value = false;
 }
 
+// Swipe left and right when drawer is closed to do quick switching between orders
+function startCollapsedOrderSwipe(event) {
+    if (isExpanded.value || !showDestinationSwitcher.value) return;
+    if (event.target?.closest?.('button')) return;
+
+    collapsedSwipeStartX.value = event.clientX;
+    collapsedSwipeStartY.value = event.clientY;
+
+    window.addEventListener('pointerup', endCollapsedOrderSwipe, { once: true });
+}
+
+function endCollapsedOrderSwipe(event) {
+    if (collapsedSwipeStartX.value === null || collapsedSwipeStartY.value === null) return;
+
+    const deltaX = event.clientX - collapsedSwipeStartX.value;
+    const deltaY = event.clientY - collapsedSwipeStartY.value;
+
+    collapsedSwipeStartX.value = null;
+    collapsedSwipeStartY.value = null;
+
+    if (Math.abs(deltaX) < ORDER_SWIPE_THRESHOLD) return;
+    if (Math.abs(deltaX) < Math.abs(deltaY) * ORDER_SWIPE_HORIZONTAL_RATIO) return;
+
+    selectNearbyRequest(deltaX < 0 ? 1 : -1);
+}
+
 onBeforeUnmount(() => {
     window.removeEventListener('pointermove', onDrag);
+    window.removeEventListener('pointerup', endDrag);
+    window.removeEventListener('pointerup', endCollapsedOrderSwipe);
 });
 
 function formatTime(value) {
@@ -508,6 +609,7 @@ async function copyToClipboard(value) {
     align-items: center;
     justify-content: space-between;
     gap: 14px;
+    touch-action: pan-y;
 }
 
 .requester-block {
@@ -630,6 +732,40 @@ async function copyToClipboard(value) {
     background-color: var(--info-card);
 }
 
+.order-switcher-row {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--info-border);
+}
+
+.order-switcher-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--info-border);
+    border-radius: 50%;
+    background: var(--drawer-bg);
+    color: var(--drawer-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.order-switcher-btn i {
+    font-size: 0.7rem;
+}
+
+.order-switcher-label {
+    color: var(--drawer-text);
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
 .info-row {
     min-height: 36px;
     display: flex;
@@ -700,6 +836,17 @@ async function copyToClipboard(value) {
     color: gray;
     font-size: 0.8rem;
     text-align: right;
+}
+
+.route-info-row {
+    align-items: flex-start;
+}
+
+.route-value {
+    max-width: 62%;
+    justify-content: flex-end;
+    line-height: 1.35;
+    word-break: break-word;
 }
 
 .copy-value {

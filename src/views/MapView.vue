@@ -2,8 +2,7 @@
     <div class="map-view">
         <GoogleMap :key="themeStore.isDark ? 'dark-map' : 'light-map'" ref="mapRef" :api-key="apiKey" :map-id="mapId"
             class="google-map" :center="mapCenter" :zoom="16" :disable-default-ui="true" :clickable-icons="false"
-            :keyboard-shortcuts="false" :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'"
-            @click="$emit('map-click')">
+            :keyboard-shortcuts="false" :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'">
 
             <div v-if="!myRequest" class="map-filter-controls">
                 <button v-for="option in filterOptions" :key="option.key" type="button" class="map-filter-btn"
@@ -30,14 +29,15 @@
             </div>
 
             <div v-if="!myRequest">
-                <AdvancedMarker v-for="request in requests" :key="request.id" :options="{
-                    position: request.deliveryCoords,
-                    title: `${request.canteen} to ${request.deliveryLocation}`
+                <AdvancedMarker v-for="group in openRequestGroups" :key="group.key" :options="{
+                    position: group.deliveryCoords,
+                    title: group.title
                 }" :pin-options="{
                     background: '#d33a2c',
                     borderColor: '#b91c1c',
                     glyphColor: '#ffffff',
-                }" @click="$emit('select-request', request)" />
+                    glyphText: group.requests.length > 1 ? String(group.requests.length) : undefined,
+                }" @click="$emit('select-request', group.requests[0])" />
             </div>
 
             <div v-else>
@@ -110,7 +110,7 @@ const props = defineProps({
     },
 });
 
-defineEmits(['select-request', 'map-click', 'update-filter-mode']);
+defineEmits(['select-request', 'update-filter-mode']);
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
@@ -136,6 +136,45 @@ const mapCenter = computed(() => {
         || props.myRequest?.deliveryCoords
         || props.requests[0]?.deliveryCoords
         || defaultCenter;
+});
+
+function destinationGroupKey(request) {
+    if (request.deliveryLocationId) return `location:${request.deliveryLocationId}`;
+    if (request.deliveryLocation) return `name:${request.deliveryLocation}`;
+    if (request.deliveryCoords) return `coords:${request.deliveryCoords.lat},${request.deliveryCoords.lng}`;
+    return `request:${request.id}`;
+}
+
+function destinationGroupTitle(group) {
+    if (group.requests.length > 1) {
+        return `${group.requests.length} orders to ${group.deliveryLocation}`;
+    }
+
+    return `${group.requests[0].canteen} to ${group.deliveryLocation}`;
+}
+
+const openRequestGroups = computed(() => {
+    const groups = new Map();
+
+    props.requests.forEach((request) => {
+        const key = destinationGroupKey(request);
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                deliveryCoords: request.deliveryCoords,
+                deliveryLocation: request.deliveryLocation,
+                requests: [],
+            });
+        }
+
+        groups.get(key).requests.push(request);
+    });
+
+    return Array.from(groups.values()).map((group) => ({
+        ...group,
+        title: destinationGroupTitle(group),
+    }));
 });
 
 const pickupMarkerOptions = computed(() => {
