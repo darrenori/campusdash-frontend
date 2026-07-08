@@ -4,12 +4,15 @@
         <!-- Sub-tabs -->
         <div class="list-header">
             <div class="sub-tabs">
-                <button v-for="tab in tabs" :key="tab.key" class="sub-tab" :class="{ active: activeTab === tab.key }"
-                    @click="activeTab = tab.key">
+                <button v-for="tab in filterOptions" :key="tab.key" class="sub-tab"
+                    :class="{ active: filterMode === tab.key }" @click="$emit('update-filter-mode', tab.key)">
                     <span class="tab-label">{{ tab.label }}</span>
                     <span v-if="tab.badge != null" class="tab-badge">{{ tab.badge }}</span>
                 </button>
             </div>
+            <p v-if="filterMode === 'next-class' && !locationAvailable" class="filter-hint">
+                Waiting for your location to match requests.
+            </p>
         </div>
 
         <!-- Next class banner -->
@@ -27,7 +30,7 @@
             <p v-if="loading" class="list-state">Loading requests…</p>
             <p v-else-if="error" class="list-state error">{{ error }}</p>
 
-            <div v-else-if="activeTab === 'next-class' && !nextClass && !myRequest" class="empty-state">
+            <div v-else-if="filterMode === 'next-class' && !nextClass && !myRequest" class="empty-state">
                 <div class="empty-icon">
                     <i class="pi pi-calendar"></i>
                 </div>
@@ -35,7 +38,7 @@
                 <p class="empty-sub">Add your NUSMods timetable in your Profile to see orders heading your way.</p>
             </div>
 
-            <div v-else-if="displayedRequests.length === 0" class="empty-state">
+            <div v-else-if="visibleRequests.length === 0" class="empty-state">
                 <div class="empty-icon">
                     <i class="pi pi-inbox"></i>
                 </div>
@@ -43,7 +46,7 @@
                 <p class="empty-sub">Check again later! New requests pop up here in real time.</p>
             </div>
 
-            <DeliveryRequestCard v-for="request in displayedRequests" :key="request.id" :request="request"
+            <DeliveryRequestCard v-for="request in visibleRequests" :key="request.id" :request="request"
                 :requester-online="onlineUserIds.has(Number(request.requester.id))"
                 :accepting="acceptingId === request.id" :is-own="!!myRequest"
                 @accept="$emit('accept-request', $event)" />
@@ -54,10 +57,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import DeliveryRequestCard from '../components/DeliveryRequestCard.vue';
 import { useAuthStore } from '../stores/auth';
-import { timetableLessons, computeNextLocation, distanceMeters } from '../utils/timetable';
+import { timetableLessons, computeNextLocation } from '../utils/timetable';
 
 const props = defineProps({
     requests: { type: Array, required: true },
@@ -65,52 +68,31 @@ const props = defineProps({
     loading: { type: Boolean, required: true },
     error: { type: String, default: null },
     acceptingId: { type: [Number, String], default: null },
-    onlineUserIds: { type: Object, required: true } // Expects a SET
+    onlineUserIds: { type: Object, required: true }, // Expects a SET
+    filterMode: { type: String, default: 'all' },
+    filterOptions: {
+        type: Array,
+        required: true,
+    },
+    locationAvailable: { type: Boolean, default: false },
 });
 
-defineEmits(['accept-request']);
+defineEmits(['accept-request', 'update-filter-mode']);
 
-const activeTab = ref('nearby');
 const authStore = useAuthStore();
 
-//where the runner's headed next, from their saved timetable
 const nextClass = computed(() => {
     const lessons = timetableLessons(authStore.user);
     return lessons ? computeNextLocation(lessons) : null;
 });
 
-const baseRequests = computed(() =>
+const showNextClassBanner = computed(() =>
+    props.filterMode === 'next-class' && !!nextClass.value && !props.myRequest && !props.loading
+);
+
+const visibleRequests = computed(() =>
     props.myRequest ? [props.myRequest] : props.requests
 );
-
-//sort orders by how close the drop-off is to the next class, so the ones on
-//the way show first. falls back to normal order if we've got no coords for it.
-const nextClassRequests = computed(() => {
-    const target = nextClass.value?.coords;
-    if (!target) return baseRequests.value;
-
-    return [...baseRequests.value].sort(
-        (a, b) => distanceMeters(a.deliveryCoords, target) - distanceMeters(b.deliveryCoords, target)
-    );
-});
-
-const displayedRequests = computed(() => {
-    if (props.myRequest) return baseRequests.value;
-    return activeTab.value === 'next-class' ? nextClassRequests.value : baseRequests.value;
-});
-
-const showNextClassBanner = computed(() =>
-    activeTab.value === 'next-class' && !!nextClass.value && !props.myRequest && !props.loading
-);
-
-const tabs = computed(() => {
-    const count = baseRequests.value.length || null;
-    return [
-        { key: 'nearby', label: 'Nearby Me', badge: count },
-        { key: 'recent', label: 'Recent (WIP)', badge: count },
-        { key: 'next-class', label: 'Next Class', badge: nextClass.value ? count : null },
-    ];
-});
 </script>
 
 <style scoped>
@@ -216,6 +198,13 @@ const tabs = computed(() => {
     font-weight: 700;
     color: var(--text-muted);
     flex-shrink: 0;
+}
+
+.filter-hint {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
 }
 
 /* ── Scrollable card area ────────────────────── */
