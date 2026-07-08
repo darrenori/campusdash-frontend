@@ -199,7 +199,8 @@ const toggleNotifications = async () => {
     } else {
         //permission granted but the subscription didn't stick, almost always a
         //service worker blocked by a self-signed / untrusted https origin
-        toast.add({ severity: 'warn', summary: 'Push not available here', detail: `${notifications.lastError || 'This device couldn’t subscribe.'} :(`, life: 9000 });
+        const reason = notifications.lastError || 'This device couldn’t subscribe';
+        toast.add({ severity: 'warn', summary: 'Push not available here', detail: `${reason.replace(/\.$/, '')} :(`, life: 9000 });
     }
 };
 

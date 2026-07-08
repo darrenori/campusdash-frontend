@@ -3,7 +3,17 @@
     <Transition name="nc-fade">
       <div v-if="visible" class="nc-backdrop" @click.self="close">
         <Transition name="nc-sheet" appear>
-          <section v-if="visible" class="nc-sheet" role="dialog" aria-label="Notifications">
+          <section
+            v-if="visible"
+            class="nc-sheet"
+            role="dialog"
+            aria-label="Notifications"
+            :style="sheetStyle"
+            @touchstart.passive="onTouchStart"
+            @touchmove="onTouchMove"
+            @touchend="onTouchEnd"
+            @touchcancel="onTouchEnd"
+          >
             <div class="nc-grabber" @click="close"></div>
 
             <header class="nc-head">
@@ -92,7 +102,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useNotificationsStore } from '../stores/notifications';
@@ -118,9 +128,58 @@ const enableHint = computed(() => {
 //state each open in case it changed in another tab
 watch(visible, (open) => {
   if (!open) return;
+  dragY.value = 0;
   if (!store.loaded) store.load();
   store.refreshPushState();
 });
+
+//drag-to-dismiss: follow the finger down, snap back if the pull was small,
+//keep sliding out if it crossed the threshold
+const DISMISS_AFTER = 96;
+const dragY = ref(0);
+const dragging = ref(false);
+let startY = 0;
+let atTop = false;
+
+const sheetStyle = computed(() => {
+  if (!dragY.value) return {};
+  return {
+    transform: `translateY(${dragY.value}px)`,
+    transition: dragging.value ? 'none' : 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+  };
+});
+
+function onTouchStart(e) {
+  if (e.touches.length !== 1) return;
+  startY = e.touches[0].clientY;
+  const body = e.currentTarget.querySelector('.nc-body');
+  atTop = !body || body.scrollTop <= 0;
+  dragging.value = true;
+}
+
+function onTouchMove(e) {
+  if (!dragging.value) return;
+  const delta = e.touches[0].clientY - startY;
+  //only take over the gesture while pulling down from the top of the list,
+  //otherwise let the body scroll normally
+  if (delta > 0 && atTop) {
+    dragY.value = delta;
+    e.preventDefault();
+  } else {
+    dragY.value = 0;
+  }
+}
+
+function onTouchEnd() {
+  if (!dragging.value) return;
+  dragging.value = false;
+  if (dragY.value > DISMISS_AFTER) {
+    dragY.value = window.innerHeight;
+    setTimeout(close, 260);
+  } else {
+    dragY.value = 0;
+  }
+}
 
 function close() {
   visible.value = false;
