@@ -54,6 +54,11 @@
                     </button>
                 </div>
 
+                <!-- NUSMods timetable → next location -->
+                <div class="timetable-section">
+                    <TimetableCard />
+                </div>
+
                 <!-- PayNow QR Code Preview -->
                 <div class="qr-preview-section">
                     <div class="qr-container-box">
@@ -157,6 +162,7 @@ import { resolveFileUrl } from '../utils/fileUrl';
 import EditProfile from '../components/EditProfile.vue';
 import EditPayNow from '../components/EditPayNow.vue';
 import BottomNav from '../components/BottomNav.vue';
+import TimetableCard from '../components/TimetableCard.vue';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
@@ -550,6 +556,10 @@ watch(
 
 .action-btn i {
     font-size: 0.95rem;
+}
+
+.timetable-section {
+    padding: 15px 15px 0;
 }
 
 .qr-preview-section {

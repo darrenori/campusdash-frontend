@@ -47,6 +47,12 @@ const router = createRouter({
             meta: { requiresAuth: true }
         },
         {
+            path: '/timetable',
+            name: 'timetable',
+            component: () => import('../views/TimetableView.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
             path: '/history',
             name: 'history',
             component: () => import('../views/HistoryView.vue'),
