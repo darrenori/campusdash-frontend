@@ -23,11 +23,11 @@
             </div>
 
             <div class="input-group">
-                <label>Email<span class="required">*</span></label>
+                <label>Email</label>
                 <IconField>
                     <InputIcon class="pi pi-envelope" />
-                    <InputText v-model="form.email" type="email" placeholder="Email" class="input-field" required
-                        autocomplete="email" />
+                    <InputText v-model="form.email" type="email" placeholder="Email" class="input-field"
+                        autocomplete="email" disabled />
                 </IconField>
             </div>
 
@@ -135,7 +135,7 @@ const imgErrorMsg = ref('');
 
 const isSubmitDisabled = computed(() => {
     // Check that the required fields are not empty before allowing form submission
-    if (!form.value.username.trim() || !form.value.email.trim() || !form.value.currentPassword || isLoading.value) return true;
+    if (!form.value.username.trim() || !form.value.currentPassword || isLoading.value) return true;
 
     // Check that the password and confirm password fields match before allowing form submission
     return form.value.newPassword !== form.value.confirmPassword;
@@ -234,7 +234,6 @@ const handleUpdateProfile = async () => {
     try {
         const payload = {
             username: form.value.username.trim(),
-            email: form.value.email.trim(),
             currentPassword: form.value.currentPassword
         };
 

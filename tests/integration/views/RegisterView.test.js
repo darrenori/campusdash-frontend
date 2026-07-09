@@ -27,6 +27,7 @@ jest.mock('../../../src/assets/logos/logo-full.svg', () => 'logo-full-stub');
 jest.mock('primevue/iconfield', () => ({ template: '<div><slot/></div>' }));
 jest.mock('primevue/inputicon', () => ({ template: '<i/>' }));
 jest.mock('primevue/inputtext', () => ({ template: '<input/>' }));
+jest.mock('primevue/inputotp', () => ({ template: '<input/>' }));
 jest.mock('primevue/password', () => ({ template: '<input type="password"/>' }));
 
 const mockToastAdd = jest.fn();
@@ -60,7 +61,7 @@ describe('RegisterView.vue', () => {
     describe('form validation states', () => {
         it('should enable the submit button when all fields are populated with matching passwords', async () => {
             wrapper.vm.username = 'newuser';
-            wrapper.vm.email = 'newuser@example.com';
+            wrapper.vm.email = 'newuser@u.nus.edu';
             wrapper.vm.password = 'password123';
             wrapper.vm.confirmPassword = 'password123';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
@@ -74,7 +75,7 @@ describe('RegisterView.vue', () => {
 
         it('should disable the submit button if password and confirmPassword are mismatched', async () => {
             wrapper.vm.username = 'newuser';
-            wrapper.vm.email = 'newuser@example.com';
+            wrapper.vm.email = 'newuser@u.nus.edu';
             wrapper.vm.password = 'password123';
             wrapper.vm.confirmPassword = 'password456';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
@@ -82,12 +83,23 @@ describe('RegisterView.vue', () => {
             expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
             expect(wrapper.find('.error-msg').text()).toBe('Passwords do not match.');
         });
+
+        it('should keep the submit button disabled for non-NUS email addresses', async () => {
+            wrapper.vm.username = 'newuser';
+            wrapper.vm.email = 'newuser@example.com';
+            wrapper.vm.password = 'password123';
+            wrapper.vm.confirmPassword = 'password123';
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
+            expect(wrapper.find('.error-msg').text()).toBe('Registration requires a @u.nus.edu email address.');
+        });
     });
 
     describe('username length constraints', () => {
         it('should block submission and show an error if username exceeds 20 characters', async () => {
             wrapper.vm.username = 'thisisaverylongusername1234567890';
-            wrapper.vm.email = 'lengthtest@example.com';
+            wrapper.vm.email = 'lengthtest@u.nus.edu';
             wrapper.vm.password = 'password123';
             wrapper.vm.confirmPassword = 'password123';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
@@ -100,12 +112,12 @@ describe('RegisterView.vue', () => {
     });
 
     describe('registration flows', () => {
-        it('should trigger loading state, send POST request, toast success, and redirect to login', async () => {
+        it('should trigger loading state, send POST request, toast success, and show OTP step', async () => {
             let resolveApi;
             apiRequest.post.mockReturnValueOnce(new Promise((resolve) => { resolveApi = resolve; }));
 
             wrapper.vm.username = '  newuser   ';
-            wrapper.vm.email = 'newuser@example.com  ';
+            wrapper.vm.email = 'newuser@u.nus.edu  ';
             wrapper.vm.password = 'password123';
             wrapper.vm.confirmPassword = 'password123';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
@@ -114,15 +126,41 @@ describe('RegisterView.vue', () => {
             await wrapper.vm.$nextTick(); // isLoading = true
 
             expect(wrapper.vm.isLoading).toBe(true);
-            expect(wrapper.find('.register-btn').text()).toBe('Registering...');
+            expect(wrapper.find('.register-btn').text()).toBe('Sending...');
 
-            resolveApi({ message: 'User registered successfully. Please proceed to login.' }); // Fulfillment
+            resolveApi({ message: 'Verification email has been sent to: newuser@u.nus.edu' }); // Fulfillment
             await flushPromises(); // API call ends
 
             expect(apiRequest.post).toHaveBeenCalledWith('/auth/register', {
                 username: 'newuser',
-                email: 'newuser@example.com',
+                email: 'newuser@u.nus.edu',
                 password: 'password123',
+            });
+            expect(mockToastAdd).toHaveBeenCalledWith({
+                severity: 'success',
+                summary: 'OTP Sent',
+                detail: 'Verification email has been sent to: newuser@u.nus.edu',
+                life: 5000,
+            });
+            expect(wrapper.vm.currentStep).toBe(2);
+            expect(mockRouterPush).not.toHaveBeenCalled();
+            expect(wrapper.vm.isLoading).toBe(false);
+        });
+
+        it('should verify OTP, toast success, and redirect to login', async () => {
+            apiRequest.post.mockResolvedValueOnce({ message: 'User registered successfully. Please proceed to login.' });
+
+            wrapper.vm.currentStep = 2;
+            wrapper.vm.email = 'newuser@u.nus.edu';
+            wrapper.vm.otp = '123456';
+            await wrapper.vm.$nextTick();
+
+            await wrapper.find('.register-form').trigger('submit.prevent');
+            await flushPromises();
+
+            expect(apiRequest.post).toHaveBeenCalledWith('/auth/register/verify-otp', {
+                email: 'newuser@u.nus.edu',
+                otp: '123456',
             });
             expect(mockToastAdd).toHaveBeenCalledWith({
                 severity: 'success',
@@ -131,14 +169,13 @@ describe('RegisterView.vue', () => {
                 life: 5000,
             });
             expect(mockRouterPush).toHaveBeenCalledWith('/login');
-            expect(wrapper.vm.isLoading).toBe(false);
         });
 
         it('should set errorMsg and clear loading state if the request fails', async () => {
             apiRequest.post.mockRejectedValueOnce(new Error('This email is already registered.'));
 
             wrapper.vm.username = 'newuser';
-            wrapper.vm.email = 'existinguser@example.com';
+            wrapper.vm.email = 'existinguser@u.nus.edu';
             wrapper.vm.password = 'password123';
             wrapper.vm.confirmPassword = 'password123';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
@@ -147,7 +184,7 @@ describe('RegisterView.vue', () => {
             await flushPromises(); // API call ends
 
             expect(wrapper.vm.isLoading).toBe(false);
-            expect(wrapper.find('.register-btn').text()).toBe('Register');
+            expect(wrapper.find('.register-btn').text()).toBe('Send Verification Code');
             expect(wrapper.find('.error-msg').text()).toBe('This email is already registered.');
         });
     });
