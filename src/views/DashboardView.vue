@@ -11,6 +11,10 @@
             </div>
         </div>
 
+        <div class="bell-wrapper">
+            <NotificationBell />
+        </div>
+
         <div class="content-area">
             <MapView v-if="viewMode === 'map'" :requests="visibleRequests" :my-request="myRequest"
                 :current-user-id="authStore.user?.id" :filter-mode="filterMode"
@@ -57,6 +61,7 @@ import MapView from './MapView.vue';
 import ListView from './ListView.vue';
 import BottomNav from '../components/BottomNav.vue';
 import DeliveryRequestDrawer from '../components/DeliveryRequestDrawer.vue';
+import NotificationBell from '../components/NotificationBell.vue';
 
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
@@ -594,6 +599,14 @@ onUnmounted(() => {
     display: flex;
     justify-content: center;
     z-index: 1000;
+    pointer-events: none;
+}
+
+.bell-wrapper {
+    position: absolute;
+    top: 22px;
+    right: 16px;
+    z-index: 1001;
     pointer-events: none;
 }
 

@@ -562,7 +562,7 @@ onUnmounted(() => {
 /* Center Buttons */
 .map-center-controls {
     position: absolute;
-    top: 24px;
+    top: 74px;
     right: 14px;
     z-index: 5;
     display: flex;

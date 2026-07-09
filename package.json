@@ -38,7 +38,8 @@
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^30.4.1",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vite-plugin-mkcert": "^2.1.0"
   },
   "overrides": {
     "js-yaml": "^5.0.0"

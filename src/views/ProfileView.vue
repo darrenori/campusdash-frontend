@@ -52,6 +52,22 @@
                         <i class="pi pi-qrcode"></i>
                         <span>PayNow</span>
                     </button>
+
+                    <button
+                        v-if="notifications.supported"
+                        class="action-btn"
+                        :class="{ 'is-on': notifications.pushEnabled }"
+                        :disabled="notifications.busy"
+                        @click="toggleNotifications"
+                    >
+                        <i :class="notifButton.icon"></i>
+                        <span>{{ notifButton.label }}</span>
+                    </button>
+                </div>
+
+                <!-- NUSMods timetable → next location -->
+                <div class="timetable-section">
+                    <TimetableCard />
                 </div>
 
                 <!-- PayNow QR Code Preview -->
@@ -151,16 +167,52 @@ import { useToast } from 'primevue/usetoast';
 
 import { useThemeStore } from '../stores/theme';
 import { useAuthStore } from '../stores/auth';
+import { useNotificationsStore } from '../stores/notifications';
 import { apiRequest } from '../utils/api';
 import { resolveFileUrl } from '../utils/fileUrl';
 
 import EditProfile from '../components/EditProfile.vue';
 import EditPayNow from '../components/EditPayNow.vue';
 import BottomNav from '../components/BottomNav.vue';
+import TimetableCard from '../components/TimetableCard.vue';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
+const notifications = useNotificationsStore();
 const toast = useToast();
+
+const notifButton = computed(() => {
+    if (notifications.permission === 'denied') return { icon: 'pi pi-bell-slash', label: 'Blocked' };
+    if (notifications.pushEnabled) return { icon: 'pi pi-bell', label: 'Alerts On' };
+    return { icon: 'pi pi-bell', label: 'Notifications' };
+});
+
+//the click is the user gesture browsers require before showing the allow prompt
+const toggleNotifications = async () => {
+    if (notifications.permission === 'denied') {
+        toast.add({ severity: 'warn', summary: 'Notifications blocked', detail: 'Re-enable notifications for this site in your browser settings.', life: 5000 });
+        return;
+    }
+    if (notifications.pushEnabled) {
+        await notifications.disable();
+        return;
+    }
+    const result = await notifications.enable();
+    if (result === 'granted' && notifications.pushEnabled) {
+        toast.add({ severity: 'success', summary: 'Notifications on', detail: 'You’ll be alerted about orders and messages.', life: 3500 });
+    } else if (result === 'denied') {
+        toast.add({ severity: 'warn', summary: 'Notifications blocked', detail: 'Allow notifications for this site to receive alerts.', life: 5000 });
+    } else {
+        //permission granted but the subscription didn't stick, almost always a
+        //service worker blocked by a self-signed / untrusted https origin
+        const reason = notifications.lastError || 'This device couldn’t subscribe';
+        toast.add({ severity: 'warn', summary: 'Push not available here', detail: `${reason.replace(/\.$/, '')} :(`, life: 9000 });
+    }
+};
+
+onMounted(() => {
+    notifications.refreshPushState();
+});
 
 const showEditView = ref(false);
 const showQrModal = ref(false);
@@ -520,6 +572,7 @@ watch(
 
 .action-buttons-row {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
     padding: 15px 20px;
@@ -548,8 +601,25 @@ watch(
     background-color: #de7300;
 }
 
+.action-btn.is-on {
+    background-color: var(--color-success);
+}
+
+.action-btn.is-on:active {
+    background-color: #0c8c61;
+}
+
+.action-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 .action-btn i {
     font-size: 0.95rem;
+}
+
+.timetable-section {
+    padding: 15px 15px 0;
 }
 
 .qr-preview-section {
