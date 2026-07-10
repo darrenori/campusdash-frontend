@@ -16,11 +16,14 @@
         </div>
 
         <div class="content-area">
-            <MapView v-if="viewMode === 'map'" :requests="requests" :my-request="myRequest" :accepting-id="acceptingId"
-                :online-user-ids="onlineUserIds" :current-user-id="authStore.user?.id"
-                @select-request="openRequestDrawer" @map-click="closeRequestDrawer" />
-            <ListView v-else :requests="requests" :my-request="myRequest" :loading="loading" :error="error"
-                :accepting-id="acceptingId" :online-user-ids="onlineUserIds" @accept-request="acceptRequest" />
+            <MapView v-if="viewMode === 'map'" :requests="visibleRequests" :my-request="myRequest"
+                :current-user-id="authStore.user?.id" :filter-mode="filterMode"
+                :filter-options="requestFilterOptions" :location-available="filterLocationAvailable"
+                @update-filter-mode="filterMode = $event" @select-request="openRequestDrawer" />
+            <ListView v-else :requests="visibleRequests" :my-request="myRequest" :loading="loading" :error="error"
+                :accepting-id="acceptingId" :online-user-ids="onlineUserIds" :filter-mode="filterMode"
+                :filter-options="requestFilterOptions" :location-available="filterLocationAvailable"
+                @update-filter-mode="filterMode = $event" @accept-request="acceptRequest" />
         </div>
 
         <button v-if="!loading && !myRequest" class="request-btn" @click="router.push('/request')">
@@ -28,10 +31,22 @@
             <span>Request</span>
         </button>
 
-        <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest" :active="!!myRequest"
+        <div v-if="showDevSeedControls" class="seed-controls">
+            <button v-if="!devSeeded" type="button" class="seed-btn" :disabled="seedingRequests"
+                @click="seedDevRequests">
+                {{ seedingRequests ? '...' : 'SEED' }}
+            </button>
+            <button v-else type="button" class="seed-btn" :disabled="seedingRequests" @click="clearDevRequests">
+                {{ seedingRequests ? '...' : 'CLEAR' }}
+            </button>
+        </div>
+
+        <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest"
+            :destination-requests="drawerDestinationRequests" :active="!!myRequest"
             :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" :cancelling="cancelling"
             :completing="completing" :runner-online="runnerOnline" @accept="acceptRequest" @cancel="handleDrawerCancel"
-            @complete="completeOrder" @collected="markCollected" @chat="openChat" />
+            @complete="completeOrder" @collected="markCollected" @chat="openChat"
+            @select-request="openRequestDrawer" />
 
         <BottomNav />
 
@@ -70,6 +85,40 @@ const loading = ref(true);
 const error = ref(null);
 const acceptingId = ref(null);
 const onlineUserIds = ref(new Set());
+const filterMode = ref('all');
+const currentLocation = ref(null);
+const nextClassRequests = ref([]);
+const devSeeded = ref(false);
+const seedingRequests = ref(false);
+
+let dashboardGeoWatchId = null;
+let nextClassRefreshTimer = null;
+
+const filterLocationAvailable = computed(() => Boolean(currentLocation.value));
+
+const requestFilterOptions = computed(() => [
+    {
+        key: 'all',
+        label: 'All',
+        badge: requests.value.length || null,
+    },
+    {
+        key: 'next-class',
+        label: 'Next Class',
+        badge: nextClassRequests.value.length || null,
+    },
+]);
+
+const visibleRequests = computed(() => {
+    if (filterMode.value === 'next-class') return nextClassRequests.value;
+    return requests.value;
+});
+
+const showDevSeedControls = computed(() => (
+    import.meta.env.DEV
+    && !loading.value
+    && !myRequest.value
+));
 
 async function loadRequests() {
     try {
@@ -82,6 +131,7 @@ async function loadRequests() {
         requests.value = data;
         myRequest.value = active;
         requestStore.setActiveRequest(active);
+        refreshNextClassRequestsSoon();
     } catch (e) {
         error.value = e.message;
     } finally {
@@ -91,6 +141,7 @@ async function loadRequests() {
 
 async function acceptRequest(id) {
     if (acceptingId.value) return;
+
     acceptingId.value = id;
     try {
         const { request } = await apiRequest.patch(`/requests/${id}/accept`, {});
@@ -103,6 +154,72 @@ async function acceptRequest(id) {
         loadRequests();
     } finally {
         acceptingId.value = null;
+    }
+}
+
+async function loadNextClassRequests() {
+    if (!currentLocation.value) {
+        nextClassRequests.value = [];
+        return;
+    }
+
+    const query = new URLSearchParams({
+        lat: String(currentLocation.value.lat),
+        lng: String(currentLocation.value.lng),
+    });
+
+    try {
+        const { requests: data } = await apiRequest.get(`/requests/next-class?${query.toString()}`);
+        nextClassRequests.value = data;
+    } catch (e) {
+        console.warn('Next Class request matching is not available yet.', e);
+        nextClassRequests.value = [];
+    }
+}
+
+function refreshNextClassRequestsSoon() {
+    if (nextClassRefreshTimer) {
+        clearTimeout(nextClassRefreshTimer);
+    }
+
+    nextClassRefreshTimer = setTimeout(() => {
+        nextClassRefreshTimer = null;
+        loadNextClassRequests();
+    }, 250);
+}
+
+async function seedDevRequests() {
+    if (seedingRequests.value) return;
+
+    seedingRequests.value = true;
+    error.value = null;
+
+    try {
+        await apiRequest.post('/requests/dev/route-matching-seeds', {});
+        devSeeded.value = true;
+        await loadRequests();
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        seedingRequests.value = false;
+    }
+}
+
+async function clearDevRequests() {
+    if (seedingRequests.value) return;
+
+    seedingRequests.value = true;
+    error.value = null;
+
+    try {
+        await apiRequest.delete('/requests/dev/route-matching-seeds');
+        devSeeded.value = false;
+        selectedMapRequest.value = null;
+        await loadRequests();
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        seedingRequests.value = false;
     }
 }
 
@@ -127,11 +244,13 @@ function onCreated(request) {
     if (request.requester.id === myId) return;
     if (!requests.value.some((r) => r.id === request.id)) {
         requests.value.unshift(request);
+        refreshNextClassRequestsSoon();
     }
 }
 
 function onAccepted({ id }) {
     requests.value = requests.value.filter((r) => r.id !== id);
+    nextClassRequests.value = nextClassRequests.value.filter((r) => r.id !== id);
 }
 
 function onActiveRequest(request) {
@@ -289,14 +408,61 @@ const drawerVisible = computed(() => {
     return Boolean(drawerRequest.value);
 });
 
+function isSameDestination(left, right) {
+    if (!left || !right) return false;
+    if (left.deliveryLocationId && right.deliveryLocationId) {
+        return Number(left.deliveryLocationId) === Number(right.deliveryLocationId);
+    }
+
+    if (left.deliveryLocation && right.deliveryLocation) {
+        return left.deliveryLocation === right.deliveryLocation;
+    }
+
+    return left.deliveryCoords?.lat === right.deliveryCoords?.lat
+        && left.deliveryCoords?.lng === right.deliveryCoords?.lng;
+}
+
+const drawerDestinationRequests = computed(() => {
+    if (!drawerRequest.value || myRequest.value) return drawerRequest.value ? [drawerRequest.value] : [];
+
+    return visibleRequests.value.filter((request) => isSameDestination(request, drawerRequest.value));
+});
+
 function openRequestDrawer(request) {
     selectedMapRequest.value = request;
 }
 
-function closeRequestDrawer() {
-    if (myRequest.value) return;
+function startDashboardLocationTracking() {
+    if (!navigator.geolocation || dashboardGeoWatchId !== null) return;
 
-    selectedMapRequest.value = null;
+    dashboardGeoWatchId = navigator.geolocation.watchPosition(
+        (position) => {
+            currentLocation.value = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+            };
+        },
+        (locationError) => {
+            console.warn('Dashboard location access denied or failed.', {
+                code: locationError.code,
+                message: locationError.message,
+            });
+            currentLocation.value = null;
+        },
+        {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 5000,
+        }
+    );
+}
+
+function stopDashboardLocationTracking() {
+    if (navigator.geolocation && dashboardGeoWatchId !== null) {
+        navigator.geolocation.clearWatch(dashboardGeoWatchId);
+    }
+
+    dashboardGeoWatchId = null;
 }
 
 watch(
@@ -311,6 +477,13 @@ watch(myRequest, (request) => {
         selectedMapRequest.value = null;
     }
 });
+
+watch(
+    () => [currentLocation.value?.lat, currentLocation.value?.lng],
+    () => {
+        refreshNextClassRequestsSoon();
+    }
+);
 
 const cancelling = ref(false);
 
@@ -380,6 +553,7 @@ async function openChat(request) {
 
 onMounted(() => {
     loadRequests();
+    startDashboardLocationTracking();
     socket.on('connect', loadRequests);
     socket.on('request:created', onCreated);
     socket.on('request:accepted', onAccepted);
@@ -393,6 +567,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    stopDashboardLocationTracking();
+    if (nextClassRefreshTimer) {
+        clearTimeout(nextClassRefreshTimer);
+    }
     socket.off('connect', loadRequests);
     socket.off('request:created', onCreated);
     socket.off('request:accepted', onAccepted);
@@ -499,5 +677,24 @@ onUnmounted(() => {
 .request-icon {
     font-size: 1.4rem;
     line-height: 1;
+}
+
+/* SEED BUTTONS */
+.seed-controls {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    z-index: 900;
+}
+
+.seed-btn {
+    min-width: 58px;
+    padding: 9px 13px;
+    cursor: pointer;
+}
+
+.seed-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
 </style>

@@ -2,8 +2,19 @@
     <div class="map-view">
         <GoogleMap :key="themeStore.isDark ? 'dark-map' : 'light-map'" ref="mapRef" :api-key="apiKey" :map-id="mapId"
             class="google-map" :center="mapCenter" :zoom="16" :disable-default-ui="true" :clickable-icons="false"
-            :keyboard-shortcuts="false" :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'"
-            @click="$emit('map-click')">
+            :keyboard-shortcuts="false" :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'">
+
+            <div v-if="!myRequest" class="map-filter-controls">
+                <button v-for="option in filterOptions" :key="option.key" type="button" class="map-filter-btn"
+                    :class="{ active: filterMode === option.key }"
+                    @click.stop="$emit('update-filter-mode', option.key)">
+                    <span>{{ option.label }}</span>
+                    <span v-if="option.badge != null" class="map-filter-badge">{{ option.badge }}</span>
+                </button>
+                <span v-if="filterMode === 'next-class' && !locationAvailable" class="map-filter-hint">
+                    Waiting for GPS
+                </span>
+            </div>
 
             <div v-if="myRequest" class="map-center-controls">
                 <button type="button" class="center-location-btn" :class="isBuyer ? 'own-location' : 'other-location'"
@@ -18,14 +29,15 @@
             </div>
 
             <div v-if="!myRequest">
-                <AdvancedMarker v-for="request in requests" :key="request.id" :options="{
-                    position: request.deliveryCoords,
-                    title: request.deliveryLocation
+                <AdvancedMarker v-for="group in openRequestGroups" :key="group.key" :options="{
+                    position: group.deliveryCoords,
+                    title: group.title
                 }" :pin-options="{
                     background: '#d33a2c',
                     borderColor: '#b91c1c',
                     glyphColor: '#ffffff',
-                }" @click="$emit('select-request', request)" />
+                    glyphText: group.requests.length > 1 ? String(group.requests.length) : undefined,
+                }" @click="$emit('select-request', group.requests[0])" />
             </div>
 
             <div v-else>
@@ -80,21 +92,25 @@ const props = defineProps({
         type: Object,
         default: null
     },
-    acceptingId: {
-        type: [Number, String],
-        default: null
-    },
-    onlineUserIds: {
-        type: Object,
-        required: true
-    },
     currentUserId: {
         type: [Number, String],
         default: null
-    }
+    },
+    filterMode: {
+        type: String,
+        default: 'all'
+    },
+    filterOptions: {
+        type: Array,
+        required: true
+    },
+    locationAvailable: {
+        type: Boolean,
+        default: false
+    },
 });
 
-defineEmits(['select-request', 'map-click']);
+defineEmits(['select-request', 'update-filter-mode']);
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
@@ -120,6 +136,45 @@ const mapCenter = computed(() => {
         || props.myRequest?.deliveryCoords
         || props.requests[0]?.deliveryCoords
         || defaultCenter;
+});
+
+function destinationGroupKey(request) {
+    if (request.deliveryLocationId) return `location:${request.deliveryLocationId}`;
+    if (request.deliveryLocation) return `name:${request.deliveryLocation}`;
+    if (request.deliveryCoords) return `coords:${request.deliveryCoords.lat},${request.deliveryCoords.lng}`;
+    return `request:${request.id}`;
+}
+
+function destinationGroupTitle(group) {
+    if (group.requests.length > 1) {
+        return `${group.requests.length} orders to ${group.deliveryLocation}`;
+    }
+
+    return `${group.requests[0].canteen} to ${group.deliveryLocation}`;
+}
+
+const openRequestGroups = computed(() => {
+    const groups = new Map();
+
+    props.requests.forEach((request) => {
+        const key = destinationGroupKey(request);
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                deliveryCoords: request.deliveryCoords,
+                deliveryLocation: request.deliveryLocation,
+                requests: [],
+            });
+        }
+
+        groups.get(key).requests.push(request);
+    });
+
+    return Array.from(groups.values()).map((group) => ({
+        ...group,
+        title: destinationGroupTitle(group),
+    }));
 });
 
 const pickupMarkerOptions = computed(() => {
@@ -432,6 +487,68 @@ onUnmounted(() => {
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
     position: relative;
     transform: translate(-50%, -50%);
+}
+
+.map-filter-controls {
+    position: absolute;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: calc(100% - 32px);
+    overflow-x: auto;
+    pointer-events: auto;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(0, 61, 124, 0.08);
+}
+
+.map-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 8px 14px;
+    background: transparent;
+    color: var(--theme-blue);
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.map-filter-btn.active {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+
+.map-filter-badge {
+    min-width: 18px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--color-accent);
+    color: #ffffff;
+    font-size: 0.65rem;
+    line-height: 1.55;
+    text-align: center;
+}
+
+.map-filter-hint {
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: rgba(0, 61, 124, 0.08);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
 }
 
 .own-location {

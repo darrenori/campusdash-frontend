@@ -229,9 +229,11 @@ function mountMap({
         props: {
             requests,
             myRequest,
-            acceptingId: null,
-            onlineUserIds: new Set(),
             currentUserId,
+            filterOptions: [
+                { key: 'all', label: 'All', badge: requests.length || null },
+                { key: 'next-class', label: 'Next Class', badge: null },
+            ],
             ...props,
         },
         global: {
@@ -283,8 +285,8 @@ describe('MapView.vue', () => {
             const markers = wrapper.findAll('.advanced-marker-stub');
 
             expect(markers).toHaveLength(2);
-            expect(markers[0].attributes('data-title')).toBe('LT28');
-            expect(markers[1].attributes('data-title')).toBe('The Deck');
+            expect(markers[0].attributes('data-title')).toBe('Frontier to LT28');
+            expect(markers[1].attributes('data-title')).toBe('Techno Edge to The Deck');
         });
 
         it('emits select-request when an open order marker is clicked', async () => {
@@ -296,13 +298,27 @@ describe('MapView.vue', () => {
             expect(wrapper.emitted('select-request')[0]).toEqual([openRequests[0]]);
         });
 
-        it('emits map-click when the map is clicked', async () => {
-            wrapper = mountMap();
+        it('groups open orders with the same destination under one pin', () => {
+            wrapper = mountMap({
+                requests: [
+                    openRequests[0],
+                    {
+                        ...openRequests[0],
+                        id: 102,
+                        stall: 'Thai',
+                        item: 'Iced kopi',
+                    },
+                    openRequests[1],
+                ],
+            });
 
-            await wrapper.find('.google-map-stub').trigger('click');
+            const markers = wrapper.findAll('.advanced-marker-stub');
 
-            expect(wrapper.emitted('map-click')).toHaveLength(1);
+            expect(markers).toHaveLength(2);
+            expect(markers[0].attributes('data-title')).toBe('2 orders to LT28');
+            expect(markers[1].attributes('data-title')).toBe('Techno Edge to The Deck');
         });
+
     });
 
     describe('accepted order markers', () => {
@@ -840,8 +856,8 @@ describe('MapView.vue', () => {
             const markers = wrapper.findAll('.advanced-marker-stub');
 
             expect(markers).toHaveLength(2);
-            expect(markers[0].attributes('data-title')).toBe('LT28');
-            expect(markers[1].attributes('data-title')).toBe('The Deck');
+            expect(markers[0].attributes('data-title')).toBe('Frontier to LT28');
+            expect(markers[1].attributes('data-title')).toBe('Techno Edge to The Deck');
         });
     });
 });

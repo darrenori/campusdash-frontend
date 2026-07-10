@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { nextTick } from 'vue';
 
 const mockRouterPush = jest.fn();
 
@@ -86,6 +87,22 @@ function createAcceptedRequest(overrides = {}) {
     });
 }
 
+function createSameDestinationRequests() {
+    const request = createRequest();
+    const secondRequest = createRequest({
+        id: 101,
+        stall: 'Thai',
+        stallId: 26,
+        item: 'Iced kopi',
+    });
+
+    return {
+        request,
+        secondRequest,
+        destinationRequests: [request, secondRequest],
+    };
+}
+
 function mountDrawer({
     request = createRequest(),
     user = buyer,
@@ -133,6 +150,128 @@ describe('DeliveryRequestDrawer.vue', () => {
     });
 
     describe('before accepting an order', () => {
+        it('shows the stall to destination route', () => {
+            wrapper = mountDrawer();
+
+            expect(wrapper.text()).toContain("Frontier - Chef's Wok -> LT28");
+        });
+
+        it('cycles between orders going to the same destination', async () => {
+            const { request, secondRequest, destinationRequests } = createSameDestinationRequests();
+
+            wrapper = mountDrawer({
+                request,
+                props: {
+                    destinationRequests,
+                },
+            });
+
+            expect(wrapper.find('.order-switcher-label').text()).toBe('Order 1 of 2');
+
+            await wrapper.findAll('.order-switcher-btn')[1].trigger('click');
+
+            expect(wrapper.emitted('select-request')).toHaveLength(1);
+            expect(wrapper.emitted('select-request')[0]).toEqual([secondRequest]);
+        });
+
+        it('keeps the drawer expanded when switching between same-destination orders', async () => {
+            const { request, secondRequest, destinationRequests } = createSameDestinationRequests();
+
+            wrapper = mountDrawer({
+                request,
+                props: {
+                    destinationRequests,
+                },
+            });
+
+            wrapper.vm.$.setupState.isExpanded = true;
+            await nextTick();
+
+            expect(wrapper.find('.delivery-drawer').classes()).toContain('expanded');
+
+            await wrapper.findAll('.order-switcher-btn')[1].trigger('click');
+            await wrapper.setProps({
+                request: secondRequest,
+                destinationRequests,
+            });
+
+            expect(wrapper.find('.delivery-drawer').classes()).toContain('expanded');
+        });
+
+        it('keeps the drawer expanded when a different map pin is selected', async () => {
+            const request = createRequest();
+            const secondRequest = createRequest({
+                id: 102,
+                deliveryLocation: 'The Deck',
+                deliveryLocationId: 6,
+                stall: 'Western',
+                stallId: 30,
+                item: 'Pasta',
+            });
+
+            wrapper = mountDrawer({ request });
+
+            wrapper.vm.$.setupState.isExpanded = true;
+            await nextTick();
+
+            await wrapper.setProps({
+                request: secondRequest,
+                destinationRequests: [secondRequest],
+            });
+
+            expect(wrapper.find('.delivery-drawer').classes()).toContain('expanded');
+        });
+
+        it('swipes the collapsed drawer header to the next same-destination order', () => {
+            const { request, secondRequest, destinationRequests } = createSameDestinationRequests();
+
+            wrapper = mountDrawer({
+                request,
+                props: {
+                    destinationRequests,
+                },
+            });
+
+            wrapper.vm.$.setupState.startCollapsedOrderSwipe({
+                clientX: 220,
+                clientY: 80,
+                target: wrapper.find('.requester-block').element,
+            });
+            wrapper.vm.$.setupState.endCollapsedOrderSwipe({
+                clientX: 140,
+                clientY: 84,
+            });
+
+            expect(wrapper.emitted('select-request')).toHaveLength(1);
+            expect(wrapper.emitted('select-request')[0]).toEqual([secondRequest]);
+        });
+
+        it('does not swipe orders from the expanded drawer header', async () => {
+            const { request, destinationRequests } = createSameDestinationRequests();
+
+            wrapper = mountDrawer({
+                request,
+                props: {
+                    destinationRequests,
+                },
+            });
+
+            wrapper.vm.$.setupState.isExpanded = true;
+            await nextTick();
+
+            wrapper.vm.$.setupState.startCollapsedOrderSwipe({
+                clientX: 220,
+                clientY: 80,
+                target: wrapper.find('.requester-block').element,
+            });
+            wrapper.vm.$.setupState.endCollapsedOrderSwipe({
+                clientX: 140,
+                clientY: 84,
+            });
+
+            expect(wrapper.emitted('select-request')).toBeUndefined();
+        });
+
         it('shows accept buttons before accepting an order', () => {
             wrapper = mountDrawer({
                 request: createRequest({
