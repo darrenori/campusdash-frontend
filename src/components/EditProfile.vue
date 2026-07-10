@@ -43,11 +43,14 @@
 
             <div class="input-group">
                 <label>New Password</label>
-                <IconField>
-                    <InputIcon class="pi pi-lock" />
-                    <Password v-model="form.newPassword" placeholder="New Password" class="input-field"
-                        :feedback="false" fluid toggleMask />
-                </IconField>
+                <div class="password-field-wrap">
+                    <IconField>
+                        <InputIcon class="pi pi-lock" />
+                        <Password v-model="form.newPassword" placeholder="New Password" class="input-field"
+                            :feedback="false" fluid toggleMask />
+                    </IconField>
+                    <PasswordRequirementsHint :value="form.newPassword" />
+                </div>
             </div>
 
             <div class="input-group">
@@ -106,6 +109,8 @@ import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import { useToast } from 'primevue/usetoast';
+import PasswordRequirementsHint from './PasswordRequirementsHint.vue';
+import { PASSWORD_POLICY_ERROR, isStrongPassword } from '../utils/passwordPolicy';
 
 const toast = useToast();
 
@@ -136,6 +141,8 @@ const imgErrorMsg = ref('');
 const isSubmitDisabled = computed(() => {
     // Check that the required fields are not empty before allowing form submission
     if (!form.value.username.trim() || !form.value.currentPassword || isLoading.value) return true;
+
+    if (form.value.newPassword && !isStrongPassword(form.value.newPassword)) return true;
 
     // Check that the password and confirm password fields match before allowing form submission
     return form.value.newPassword !== form.value.confirmPassword;
@@ -239,6 +246,10 @@ const handleUpdateProfile = async () => {
 
         // The newPassword field should only be included in the payload if it is not empty
         if (form.value.newPassword && form.value.newPassword.trim() !== '') {
+            if (!isStrongPassword(form.value.newPassword)) {
+                errorMsg.value = PASSWORD_POLICY_ERROR;
+                return;
+            }
             payload.newPassword = form.value.newPassword;
         }
 
@@ -369,6 +380,10 @@ const handleUpdateProfile = async () => {
 .input-field {
     height: 3rem;
     width: 100%;
+}
+
+.password-field-wrap {
+    position: relative;
 }
 
 .form-actions {

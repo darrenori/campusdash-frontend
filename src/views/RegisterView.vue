@@ -25,11 +25,14 @@
                             autocomplete="email" />
                     </IconField>
 
-                    <IconField>
-                        <InputIcon class="pi pi-lock" />
-                        <Password v-model="password" placeholder="Password" class="input-field" :feedback="false" fluid
-                            toggleMask :inputProps="{ autocomplete: 'new-password' }" />
-                    </IconField>
+                    <div class="password-field-wrap">
+                        <IconField>
+                            <InputIcon class="pi pi-lock" />
+                            <Password v-model="password" placeholder="Password" class="input-field" :feedback="false"
+                                fluid toggleMask :inputProps="{ autocomplete: 'new-password' }" />
+                        </IconField>
+                        <PasswordRequirementsHint :value="password" />
+                    </div>
 
                     <IconField>
                         <InputIcon class="pi pi-key" />
@@ -88,6 +91,8 @@ import InputText from 'primevue/inputtext';
 import InputOtp from 'primevue/inputotp';
 import Password from 'primevue/password';
 import { useToast } from 'primevue/usetoast';
+import PasswordRequirementsHint from '../components/PasswordRequirementsHint.vue';
+import { PASSWORD_POLICY_ERROR, isStrongPassword } from '../utils/passwordPolicy';
 
 const toast = useToast();
 
@@ -110,6 +115,8 @@ const isSubmitDisabled = computed(() => {
     if (!username.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value || isLoading.value) return true;
 
     if (!isNusEmail.value) return true;
+
+    if (!isStrongPassword(password.value)) return true;
 
     // Check that the password and confirm password fields match before allowing form submission
     return password.value !== confirmPassword.value;
@@ -148,6 +155,11 @@ const handleRegister = async () => {
 
     if (!isNusEmail.value) {
         errorMsg.value = 'Registration requires a @u.nus.edu email address.';
+        return;
+    }
+
+    if (!isStrongPassword(password.value)) {
+        errorMsg.value = PASSWORD_POLICY_ERROR;
         return;
     }
 
@@ -335,6 +347,10 @@ const handleOtpSubmit = async () => {
 .input-field {
     height: 3rem;
     width: 100%;
+}
+
+.password-field-wrap {
+    position: relative;
 }
 
 .otp-wrapper {

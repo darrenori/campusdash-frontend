@@ -62,8 +62,8 @@ describe('RegisterView.vue', () => {
         it('should enable the submit button when all fields are populated with matching passwords', async () => {
             wrapper.vm.username = 'newuser';
             wrapper.vm.email = 'newuser@u.nus.edu';
-            wrapper.vm.password = 'password123';
-            wrapper.vm.confirmPassword = 'password123';
+            wrapper.vm.password = 'Password123';
+            wrapper.vm.confirmPassword = 'Password123';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
 
             expect(wrapper.find('.register-btn').attributes('disabled')).toBeUndefined();
@@ -76,8 +76,8 @@ describe('RegisterView.vue', () => {
         it('should disable the submit button if password and confirmPassword are mismatched', async () => {
             wrapper.vm.username = 'newuser';
             wrapper.vm.email = 'newuser@u.nus.edu';
-            wrapper.vm.password = 'password123';
-            wrapper.vm.confirmPassword = 'password456';
+            wrapper.vm.password = 'Password123';
+            wrapper.vm.confirmPassword = 'Password456';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
 
             expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
@@ -87,12 +87,22 @@ describe('RegisterView.vue', () => {
         it('should keep the submit button disabled for non-NUS email addresses', async () => {
             wrapper.vm.username = 'newuser';
             wrapper.vm.email = 'newuser@example.com';
+            wrapper.vm.password = 'Password123';
+            wrapper.vm.confirmPassword = 'Password123';
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
+            expect(wrapper.find('.error-msg').text()).toBe('Registration requires a @u.nus.edu email address.');
+        });
+
+        it('should keep the submit button disabled when password does not meet policy', async () => {
+            wrapper.vm.username = 'newuser';
+            wrapper.vm.email = 'newuser@u.nus.edu';
             wrapper.vm.password = 'password123';
             wrapper.vm.confirmPassword = 'password123';
             await wrapper.vm.$nextTick();
 
             expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
-            expect(wrapper.find('.error-msg').text()).toBe('Registration requires a @u.nus.edu email address.');
         });
     });
 
@@ -100,8 +110,8 @@ describe('RegisterView.vue', () => {
         it('should block submission and show an error if username exceeds 20 characters', async () => {
             wrapper.vm.username = 'thisisaverylongusername1234567890';
             wrapper.vm.email = 'lengthtest@u.nus.edu';
-            wrapper.vm.password = 'password123';
-            wrapper.vm.confirmPassword = 'password123';
+            wrapper.vm.password = 'Password123';
+            wrapper.vm.confirmPassword = 'Password123';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
 
             await wrapper.find('.register-form').trigger('submit.prevent');
@@ -118,8 +128,8 @@ describe('RegisterView.vue', () => {
 
             wrapper.vm.username = '  newuser   ';
             wrapper.vm.email = 'newuser@u.nus.edu  ';
-            wrapper.vm.password = 'password123';
-            wrapper.vm.confirmPassword = 'password123';
+            wrapper.vm.password = 'Password123';
+            wrapper.vm.confirmPassword = 'Password123';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
 
             wrapper.find('.register-form').trigger('submit.prevent');
@@ -134,7 +144,7 @@ describe('RegisterView.vue', () => {
             expect(apiRequest.post).toHaveBeenCalledWith('/auth/register', {
                 username: 'newuser',
                 email: 'newuser@u.nus.edu',
-                password: 'password123',
+                password: 'Password123',
             });
             expect(mockToastAdd).toHaveBeenCalledWith({
                 severity: 'success',
@@ -176,8 +186,8 @@ describe('RegisterView.vue', () => {
 
             wrapper.vm.username = 'newuser';
             wrapper.vm.email = 'existinguser@u.nus.edu';
-            wrapper.vm.password = 'password123';
-            wrapper.vm.confirmPassword = 'password123';
+            wrapper.vm.password = 'Password123';
+            wrapper.vm.confirmPassword = 'Password123';
             await wrapper.vm.$nextTick(); // Recalculate isSubmitDisabled
 
             await wrapper.find('.register-form').trigger('submit.prevent');
