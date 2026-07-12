@@ -119,6 +119,22 @@ describe('LoginView.vue', () => {
             expect(wrapper.vm.isLoading).toBe(false);
         });
 
+        it('should submit an email identifier without truncating it', async () => {
+            apiRequest.post.mockResolvedValueOnce({ user: mockUser });
+
+            wrapper.vm.username = 'testuser@u.nus.edu';
+            wrapper.vm.password = 'Password123';
+            await wrapper.vm.$nextTick();
+
+            await wrapper.find('.login-form').trigger('submit.prevent');
+            await flushPromises();
+
+            expect(apiRequest.post).toHaveBeenCalledWith('/auth/login', {
+                username: 'testuser@u.nus.edu',
+                password: 'Password123',
+            });
+        });
+
         it('should set errorMsg and clear loading state if the request fails', async () => {
             apiRequest.post.mockRejectedValueOnce(new Error('Invalid username or password.'));
 

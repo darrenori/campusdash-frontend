@@ -15,8 +15,7 @@
           <!-- IconField PrimeVue Component for placing icons inside input fields -->
           <IconField>
             <InputIcon class="pi pi-user" />
-            <InputText v-model="username" placeholder="Username" class="input-field" autocomplete="username"
-              maxlength="20" />
+            <InputText v-model="username" placeholder="Username or Email" class="input-field" autocomplete="username" />
           </IconField>
 
           <IconField>

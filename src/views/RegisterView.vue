@@ -9,7 +9,7 @@
             </div>
 
             <form v-if="currentStep === 1" class="register-form" @submit.prevent="handleRegister">
-                <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+                <p v-if="displayErrorMsg" class="error-msg">{{ displayErrorMsg }}</p>
 
                 <div class="input-container">
                     <!-- IconField PrimeVue Component for placing icons inside input fields -->
@@ -78,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiRequest } from '../utils/api';
 
@@ -109,39 +109,32 @@ const isLoading = ref(false);
 const errorMsg = ref('');
 
 const isNusEmail = computed(() => email.value.trim().toLowerCase().endsWith('@u.nus.edu'));
+const isUsernameValid = computed(() => !username.value.trim().includes('@'));
+const hasStartedRegisterForm = computed(() => Boolean(
+    username.value.trim() ||
+    email.value.trim() ||
+    password.value ||
+    confirmPassword.value
+));
 
-const isSubmitDisabled = computed(() => {
-    // Check that the fields are not empty before allowing form submission
-    if (!username.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value || isLoading.value) return true;
+const registerValidationMessage = computed(() => {
+    if (!username.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value) return 'Fill in all fields to continue.';
 
-    if (!isNusEmail.value) return true;
+    if (!isUsernameValid.value) return 'Username cannot contain @.';
 
-    if (!isStrongPassword(password.value)) return true;
+    if (!isNusEmail.value) return 'Registration requires a @u.nus.edu email address.';
 
-    // Check that the password and confirm password fields match before allowing form submission
-    return password.value !== confirmPassword.value;
+    if (!isStrongPassword(password.value)) return PASSWORD_POLICY_ERROR;
+
+    if (password.value !== confirmPassword.value) return 'Passwords do not match.';
+
+    return '';
 });
 
-// Display error if passwords do not match
-watch(
-    () => [password.value, confirmPassword.value],
-    ([newPass, confirmPass]) => {
-        if (confirmPass && newPass !== confirmPass) {
-            errorMsg.value = 'Passwords do not match.';
-        } else if (email.value.trim() && !isNusEmail.value) {
-            errorMsg.value = 'Registration requires a @u.nus.edu email address.';
-        } else {
-            errorMsg.value = '';
-        }
-    }
-);
-
-watch(email, () => {
-    if (email.value.trim() && !isNusEmail.value) {
-        errorMsg.value = 'Registration requires a @u.nus.edu email address.';
-    } else if (password.value === confirmPassword.value) {
-        errorMsg.value = '';
-    }
+const isSubmitDisabled = computed(() => isLoading.value || Boolean(registerValidationMessage.value));
+const displayErrorMsg = computed(() => {
+    if (hasStartedRegisterForm.value && registerValidationMessage.value) return registerValidationMessage.value;
+    return errorMsg.value;
 });
 
 // Function to submit registration form data to the backend API
@@ -150,16 +143,6 @@ const handleRegister = async () => {
 
     if (username.value.length > 20) {
         errorMsg.value = 'Username cannot exceed 20 characters.';
-        return;
-    }
-
-    if (!isNusEmail.value) {
-        errorMsg.value = 'Registration requires a @u.nus.edu email address.';
-        return;
-    }
-
-    if (!isStrongPassword(password.value)) {
-        errorMsg.value = PASSWORD_POLICY_ERROR;
         return;
     }
 

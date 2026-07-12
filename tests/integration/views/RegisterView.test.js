@@ -95,6 +95,16 @@ describe('RegisterView.vue', () => {
             expect(wrapper.find('.error-msg').text()).toBe('Registration requires a @u.nus.edu email address.');
         });
 
+        it('should keep the submit button disabled when username contains @', async () => {
+            wrapper.vm.username = 'new@user';
+            wrapper.vm.email = 'newuser@u.nus.edu';
+            wrapper.vm.password = 'Password123';
+            wrapper.vm.confirmPassword = 'Password123';
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
+        });
+
         it('should keep the submit button disabled when password does not meet policy', async () => {
             wrapper.vm.username = 'newuser';
             wrapper.vm.email = 'newuser@u.nus.edu';
@@ -103,6 +113,15 @@ describe('RegisterView.vue', () => {
             await wrapper.vm.$nextTick();
 
             expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
+            expect(wrapper.find('.error-msg').text()).toBe('Password must be at least 8 characters and include uppercase, lowercase, and number.');
+        });
+
+        it('should explain why the submit button is disabled when required fields are missing', async () => {
+            wrapper.vm.username = 'newuser';
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.find('.register-btn').attributes('disabled')).toBeDefined();
+            expect(wrapper.find('.error-msg').text()).toBe('Fill in all fields to continue.');
         });
     });
 
