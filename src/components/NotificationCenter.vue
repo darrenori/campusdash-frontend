@@ -130,25 +130,32 @@ const enableHint = computed(() => {
 watch(visible, (open) => {
   if (!open) return;
   dragY.value = 0;
+  expanded.value = false;
   if (!store.loaded) store.load();
   store.refreshPushState();
 });
 
-//drag-to-dismiss: follow the finger down, snap back if the pull was small,
-//keep sliding out if it crossed the threshold
-const DISMISS_AFTER = 96;
+//sheet sits at a comfortable height and swipes up to near-full. swipe down
+//shrinks it back, and one more pull from the collapsed size dismisses it.
+const COLLAPSED_H = '62vh';
+const EXPANDED_H = '90vh';
+const EXPAND_AFTER = 48;   //upward pull that snaps to full height
+const COLLAPSE_AFTER = 72; //downward pull from full that settles back down
+const DISMISS_AFTER = 96;  //downward pull from collapsed that closes
+
 const dragY = ref(0);
 const dragging = ref(false);
+const expanded = ref(false);
 let startY = 0;
 let atTop = false;
 
-const sheetStyle = computed(() => {
-  if (!dragY.value) return {};
-  return {
-    transform: `translateY(${dragY.value}px)`,
-    transition: dragging.value ? 'none' : 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
-  };
-});
+const sheetStyle = computed(() => ({
+  height: expanded.value ? EXPANDED_H : COLLAPSED_H,
+  transform: dragY.value ? `translateY(${dragY.value}px)` : '',
+  transition: dragging.value
+    ? 'none'
+    : 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), height 0.34s cubic-bezier(0.32, 0.72, 0, 1)',
+}));
 
 function onTouchStart(e) {
   if (e.touches.length !== 1) return;
@@ -161,8 +168,17 @@ function onTouchStart(e) {
 function onTouchMove(e) {
   if (!dragging.value) return;
   const delta = e.touches[0].clientY - startY;
-  //only take over the gesture while pulling down from the top of the list,
-  //otherwise let the body scroll normally
+
+  //pulling up from the top grows a collapsed sheet to full height
+  if (delta < -EXPAND_AFTER && !expanded.value && atTop) {
+    expanded.value = true;
+    startY = e.touches[0].clientY;
+    dragY.value = 0;
+    e.preventDefault();
+    return;
+  }
+
+  //pulling down from the top follows the finger, ready to shrink or dismiss
   if (delta > 0 && atTop) {
     dragY.value = delta;
     e.preventDefault();
@@ -174,7 +190,12 @@ function onTouchMove(e) {
 function onTouchEnd() {
   if (!dragging.value) return;
   dragging.value = false;
-  if (dragY.value > DISMISS_AFTER) {
+
+  const pulled = dragY.value;
+  if (expanded.value) {
+    dragY.value = 0;
+    if (pulled > COLLAPSE_AFTER) expanded.value = false;
+  } else if (pulled > DISMISS_AFTER) {
     dragY.value = window.innerHeight;
     setTimeout(close, 260);
   } else {
@@ -263,7 +284,7 @@ function relTime(iso) {
 
 .nc-sheet {
   width: min(520px, 100%);
-  max-height: 82vh;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-surface);
@@ -385,6 +406,8 @@ function relTime(iso) {
 }
 
 .nc-body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 0 12px;
