@@ -106,6 +106,7 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useNotificationsStore } from '../stores/notifications';
+import { pushFailureReason } from '../utils/push';
 
 const visible = defineModel('visible', { default: false });
 
@@ -207,7 +208,7 @@ async function runEnable() {
     toast.add({
       severity: 'warn',
       summary: 'Push not available here',
-      detail: `${store.lastError || 'This device could not subscribe.'} Chrome needs a trusted origin — try https://localhost:5173.`,
+      detail: pushFailureReason(result, store.lastError),
       life: 9000,
     });
   }

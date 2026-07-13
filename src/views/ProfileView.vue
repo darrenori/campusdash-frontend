@@ -168,6 +168,7 @@ import { useToast } from 'primevue/usetoast';
 import { useThemeStore } from '../stores/theme';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationsStore } from '../stores/notifications';
+import { pushFailureReason } from '../utils/push';
 import { apiRequest } from '../utils/api';
 import { resolveFileUrl } from '../utils/fileUrl';
 
@@ -203,10 +204,9 @@ const toggleNotifications = async () => {
     } else if (result === 'denied') {
         toast.add({ severity: 'warn', summary: 'Notifications blocked', detail: 'Allow notifications for this site to receive alerts.', life: 5000 });
     } else {
-        //permission granted but the subscription didn't stick, almost always a
-        //service worker blocked by a self-signed / untrusted https origin
-        const reason = notifications.lastError || 'This device couldn’t subscribe';
-        toast.add({ severity: 'warn', summary: 'Push not available here', detail: `${reason.replace(/\.$/, '')} :(`, life: 9000 });
+        //push granted but the subscription didn't stick, usually server push is
+        //off (no VAPID keys), or on a dev build a self-signed origin blocks the worker
+        toast.add({ severity: 'warn', summary: 'Push not available here', detail: pushFailureReason(result, notifications.lastError), life: 9000 });
     }
 };
 

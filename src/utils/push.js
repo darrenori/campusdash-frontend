@@ -81,6 +81,26 @@ export async function hasPushSubscription() {
   }
 }
 
+//plain-language reason an enable attempt failed, shared by the profile toggle
+//and the notification sheet so their wording can't drift apart. The old copy
+//always blamed an untrusted origin and hardcoded a localhost URL, which is
+//nonsense on the deployed site, so the trusted-origin hint only shows on a
+//local build now.
+export function pushFailureReason(result, lastError) {
+  if (result === 'unsupported')
+    return "This browser or device can't receive push notifications. On iPhone, add CampusDash to your Home Screen first.";
+  if (result === 'unavailable')
+    return "Push notifications aren't switched on for CampusDash right now.";
+  if (result === 'default')
+    return 'The notification prompt was dismissed. Tap again to allow alerts.';
+
+  const reason = (lastError || 'This device could not subscribe').replace(/\.\s*$/, '');
+  const onDevOrigin = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  return onDevOrigin
+    ? `${reason}. On a local build, open a trusted origin like https://localhost:5173.`
+    : `${reason}.`;
+}
+
 //surface an OS notification straight from the page. Only used as a fallback when
 //the tab is backgrounded and web push isn't carrying the load; stays silent if
 //permission was never granted.
