@@ -20,7 +20,7 @@
             </div>
 
             <svg class="header-wave" viewBox="0 0 500 70" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M0,26 C150,2 330,60 500,34 L500,70 L0,70 Z" class="wave-fill" />
+                <path d="M0,0 H500 V34 C330,60 150,2 0,26 Z" class="wave-fill" />
             </svg>
         </header>
 
@@ -314,12 +314,22 @@ onMounted(loadHistory);
    ═══════════════════════════════════════════ */
 .hist-header {
     position: relative;
-    background: var(--color-accent);
     padding: 38px 24px 62px;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.hist-header::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 55px;
+    background: var(--color-accent);
+    z-index: 0;
 }
 
 .hist-brand {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: 14px;
@@ -344,6 +354,8 @@ onMounted(loadHistory);
 }
 
 .hist-chips {
+    position: relative;
+    z-index: 1;
     display: flex;
     gap: 8px;
     margin-top: 16px;
@@ -386,9 +398,10 @@ onMounted(loadHistory);
     bottom: -1px;
     width: 100%;
     height: 56px;
+    z-index: 0;
 }
 
-.wave-fill { fill: var(--bg-main); }
+.wave-fill { fill: var(--color-accent); }
 
 /* ═══════════════════════════════════════════
    FILTER

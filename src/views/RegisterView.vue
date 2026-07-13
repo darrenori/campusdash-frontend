@@ -8,8 +8,8 @@
                 <img src="../assets/logos/logo-full.svg" alt="CampusDash Logo" class="cd-logo" />
             </div>
 
-            <form class="register-form" @submit.prevent="handleRegister">
-                <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+            <form v-if="currentStep === 1" class="register-form" @submit.prevent="handleRegister">
+                <p v-if="displayErrorMsg" class="error-msg">{{ displayErrorMsg }}</p>
 
                 <div class="input-container">
                     <!-- IconField PrimeVue Component for placing icons inside input fields -->
@@ -21,14 +21,18 @@
 
                     <IconField>
                         <InputIcon class="pi pi-envelope" />
-                        <InputText v-model="email" placeholder="Email" class="input-field" autocomplete="email" />
+                        <InputText v-model="email" placeholder="NUS Email" class="input-field" type="email"
+                            autocomplete="email" />
                     </IconField>
 
-                    <IconField>
-                        <InputIcon class="pi pi-lock" />
-                        <Password v-model="password" placeholder="Password" class="input-field" :feedback="false" fluid
-                            toggleMask :inputProps="{ autocomplete: 'new-password' }" />
-                    </IconField>
+                    <div class="password-field-wrap">
+                        <IconField>
+                            <InputIcon class="pi pi-lock" />
+                            <Password v-model="password" placeholder="Password" class="input-field" :feedback="false"
+                                fluid toggleMask :inputProps="{ autocomplete: 'new-password' }" />
+                        </IconField>
+                        <PasswordRequirementsHint :value="password" />
+                    </div>
 
                     <IconField>
                         <InputIcon class="pi pi-key" />
@@ -39,18 +43,42 @@
 
                 <div class="btn-container">
                     <button type="submit" class="register-btn" :disabled="isSubmitDisabled">
-                        {{ isLoading ? 'Registering...' : 'Register' }}
+                        {{ isLoading ? 'Sending...' : 'Send Verification Code' }}
                     </button>
                     <RouterLink to="/login" class="login-btn">Existing User</RouterLink>
                 </div>
 
             </form>
+
+            <div v-else class="step-container">
+                <div class="instruction-container">
+                    <h2>Verify Your Email</h2>
+                    <p>We sent a 6-digit code to <strong>{{ email }}</strong>. Enter it below to finish registration.</p>
+                </div>
+
+                <form class="register-form" @submit.prevent="handleOtpSubmit">
+                    <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
+                    <div class="input-container otp-wrapper">
+                        <InputOtp v-model="otp" :length="6" integerOnly class="otp-input" :disabled="isLoading" />
+                    </div>
+
+                    <div class="btn-container">
+                        <button type="submit" class="register-btn" :disabled="otp.length !== 6 || isLoading">
+                            {{ isLoading ? 'Verifying...' : 'Verify Code' }}
+                        </button>
+                        <button type="button" class="login-btn" @click="currentStep = 1" :disabled="isLoading">
+                            Back
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiRequest } from '../utils/api';
 
@@ -60,8 +88,11 @@ const router = useRouter();
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import InputOtp from 'primevue/inputotp';
 import Password from 'primevue/password';
 import { useToast } from 'primevue/usetoast';
+import PasswordRequirementsHint from '../components/PasswordRequirementsHint.vue';
+import { PASSWORD_POLICY_ERROR, isStrongPassword } from '../utils/passwordPolicy';
 
 const toast = useToast();
 
@@ -70,30 +101,41 @@ const username = ref('');
 const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
+const otp = ref('');
 
 // UI State
+const currentStep = ref(1);
 const isLoading = ref(false);
 const errorMsg = ref('');
 
-const isSubmitDisabled = computed(() => {
-    // Check that the fields are not empty before allowing form submission
-    if (!username.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value || isLoading.value) return true;
+const isNusEmail = computed(() => email.value.trim().toLowerCase().endsWith('@u.nus.edu'));
+const isUsernameValid = computed(() => !username.value.trim().includes('@'));
+const hasStartedRegisterForm = computed(() => Boolean(
+    username.value.trim() ||
+    email.value.trim() ||
+    password.value ||
+    confirmPassword.value
+));
 
-    // Check that the password and confirm password fields match before allowing form submission
-    return password.value !== confirmPassword.value;
+const registerValidationMessage = computed(() => {
+    if (!username.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value) return 'Fill in all fields to continue.';
+
+    if (!isUsernameValid.value) return 'Username cannot contain @.';
+
+    if (!isNusEmail.value) return 'Registration requires a @u.nus.edu email address.';
+
+    if (!isStrongPassword(password.value)) return PASSWORD_POLICY_ERROR;
+
+    if (password.value !== confirmPassword.value) return 'Passwords do not match.';
+
+    return '';
 });
 
-// Display error if passwords do not match
-watch(
-    () => [password.value, confirmPassword.value],
-    ([newPass, confirmPass]) => {
-        if (confirmPass && newPass !== confirmPass) {
-            errorMsg.value = 'Passwords do not match.';
-        } else {
-            errorMsg.value = '';
-        }
-    }
-);
+const isSubmitDisabled = computed(() => isLoading.value || Boolean(registerValidationMessage.value));
+const displayErrorMsg = computed(() => {
+    if (hasStartedRegisterForm.value && registerValidationMessage.value) return registerValidationMessage.value;
+    return errorMsg.value;
+});
 
 // Function to submit registration form data to the backend API
 const handleRegister = async () => {
@@ -116,15 +158,41 @@ const handleRegister = async () => {
 
         toast.add({
             severity: 'success',
-            summary: 'Account Registered!',
-            detail: response.message || 'Redirecting to login...',
+            summary: 'OTP Sent',
+            detail: response.message,
             life: 5000
         });
 
-        // Redirect to login page when successfully registered
-        router.push('/login');
+        currentStep.value = 2;
     } catch (err) {
         errorMsg.value = err.message || 'An error has occurred.';
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const handleOtpSubmit = async () => {
+    if (otp.value.length !== 6 || isLoading.value) return;
+
+    isLoading.value = true;
+    errorMsg.value = '';
+
+    try {
+        const response = await apiRequest.post('/auth/register/verify-otp', {
+            email: email.value.trim(),
+            otp: otp.value
+        });
+
+        toast.add({
+            severity: 'success',
+            summary: 'Account Registered!',
+            detail: response.message || 'User registered successfully. Please proceed to login.',
+            life: 5000
+        });
+
+        router.push('/login');
+    } catch (err) {
+        errorMsg.value = err.message || 'Invalid or expired OTP.';
     } finally {
         isLoading.value = false;
     }
@@ -163,6 +231,24 @@ const handleRegister = async () => {
 .cd-logo {
     width: 100%;
     align-self: center;
+}
+
+.instruction-container {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.instruction-container h2 {
+    color: var(--color-primary);
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.instruction-container p {
+    color: #4d4d4d;
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 .top-waves {
@@ -244,6 +330,16 @@ const handleRegister = async () => {
 .input-field {
     height: 3rem;
     width: 100%;
+}
+
+.password-field-wrap {
+    position: relative;
+}
+
+.otp-wrapper {
+    align-items: center;
+    justify-content: center;
+    margin: 1rem 0;
 }
 
 .btn-container {

@@ -71,12 +71,15 @@
                     <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
 
                     <div class="input-container">
-                        <IconField>
-                            <InputIcon class="pi pi-lock" />
-                            <Password v-model="password" placeholder="New Password" class="input-field"
-                                :feedback="false" fluid toggleMask :inputProps="{ autocomplete: 'new-password' }"
-                                :disabled="isLoading" />
-                        </IconField>
+                        <div class="password-field-wrap">
+                            <IconField>
+                                <InputIcon class="pi pi-lock" />
+                                <Password v-model="password" placeholder="New Password" class="input-field"
+                                    :feedback="false" fluid toggleMask :inputProps="{ autocomplete: 'new-password' }"
+                                    :disabled="isLoading" />
+                            </IconField>
+                            <PasswordRequirementsHint :value="password" />
+                        </div>
 
                         <IconField>
                             <InputIcon class="pi pi-key" />
@@ -111,6 +114,8 @@ import InputText from 'primevue/inputtext';
 import InputOtp from 'primevue/inputotp';
 import Password from 'primevue/password';
 import { useToast } from 'primevue/usetoast';
+import PasswordRequirementsHint from '../components/PasswordRequirementsHint.vue';
+import { PASSWORD_POLICY_ERROR, isStrongPassword } from '../utils/passwordPolicy';
 
 const toast = useToast();
 
@@ -130,7 +135,7 @@ const errorMsg = ref('');
 // Check that the password and confirm password fields match and are not empty before allowing form submission
 const isResetDisabled = computed(() => {
     if (!password.value || !confirmPassword.value) return true;
-    return password.value !== confirmPassword.value || isLoading.value;
+    return !isStrongPassword(password.value) || password.value !== confirmPassword.value || isLoading.value;
 });
 
 // Navigation Handlers for each step of the password reset process
@@ -192,6 +197,11 @@ const handleOtpSubmit = async () => {
 // 3. Submit new password
 const handlePasswordReset = async () => {
     if (isResetDisabled.value) return;
+
+    if (!isStrongPassword(password.value)) {
+        errorMsg.value = PASSWORD_POLICY_ERROR;
+        return;
+    }
 
     isLoading.value = true;
     errorMsg.value = '';
@@ -360,6 +370,10 @@ const handlePasswordReset = async () => {
 .input-field {
     height: 3rem;
     width: 100%;
+}
+
+.password-field-wrap {
+    position: relative;
 }
 
 .btn-container {

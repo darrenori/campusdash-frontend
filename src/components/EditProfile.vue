@@ -23,11 +23,11 @@
             </div>
 
             <div class="input-group">
-                <label>Email<span class="required">*</span></label>
+                <label>Email</label>
                 <IconField>
                     <InputIcon class="pi pi-envelope" />
-                    <InputText v-model="form.email" type="email" placeholder="Email" class="input-field" required
-                        autocomplete="email" />
+                    <InputText v-model="form.email" type="email" placeholder="Email" class="input-field"
+                        autocomplete="email" disabled />
                 </IconField>
             </div>
 
@@ -43,11 +43,14 @@
 
             <div class="input-group">
                 <label>New Password</label>
-                <IconField>
-                    <InputIcon class="pi pi-lock" />
-                    <Password v-model="form.newPassword" placeholder="New Password" class="input-field"
-                        :feedback="false" fluid toggleMask />
-                </IconField>
+                <div class="password-field-wrap">
+                    <IconField>
+                        <InputIcon class="pi pi-lock" />
+                        <Password v-model="form.newPassword" placeholder="New Password" class="input-field"
+                            :feedback="false" fluid toggleMask />
+                    </IconField>
+                    <PasswordRequirementsHint :value="form.newPassword" />
+                </div>
             </div>
 
             <div class="input-group">
@@ -59,7 +62,7 @@
                 </IconField>
             </div>
 
-            <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+            <p v-if="displayErrorMsg" class="error-msg">{{ displayErrorMsg }}</p>
 
             <div class="form-actions">
                 <button type="button" class="back-btn" @click="isVisible = false">Back</button>
@@ -106,6 +109,8 @@ import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import { useToast } from 'primevue/usetoast';
+import PasswordRequirementsHint from './PasswordRequirementsHint.vue';
+import { PASSWORD_POLICY_ERROR, isStrongPassword } from '../utils/passwordPolicy';
 
 const toast = useToast();
 
@@ -133,25 +138,30 @@ const isLoading = ref(false);
 const errorMsg = ref('');
 const imgErrorMsg = ref('');
 
-const isSubmitDisabled = computed(() => {
-    // Check that the required fields are not empty before allowing form submission
-    if (!form.value.username.trim() || !form.value.email.trim() || !form.value.currentPassword || isLoading.value) return true;
+const hasStartedProfileForm = computed(() => Boolean(
+    form.value.username.trim() !== (props.userData?.username || '') ||
+    form.value.currentPassword ||
+    form.value.newPassword ||
+    form.value.confirmPassword
+));
 
-    // Check that the password and confirm password fields match before allowing form submission
-    return form.value.newPassword !== form.value.confirmPassword;
+const profileValidationMessage = computed(() => {
+    if (!form.value.username.trim() || !form.value.currentPassword) return 'Fill in all required fields to continue.';
+
+    if (form.value.username.trim().includes('@')) return 'Username cannot contain @.';
+
+    if (form.value.newPassword && !isStrongPassword(form.value.newPassword)) return PASSWORD_POLICY_ERROR;
+
+    if (form.value.newPassword !== form.value.confirmPassword) return 'Passwords do not match.';
+
+    return '';
 });
 
-// Display error if passwords do not match
-watch(
-    () => [form.value.newPassword, form.value.confirmPassword],
-    ([newPass, confirmPass]) => {
-        if (confirmPass && newPass !== confirmPass) {
-            errorMsg.value = 'Passwords do not match.';
-        } else {
-            errorMsg.value = '';
-        }
-    }
-);
+const isSubmitDisabled = computed(() => isLoading.value || Boolean(profileValidationMessage.value));
+const displayErrorMsg = computed(() => {
+    if (hasStartedProfileForm.value && profileValidationMessage.value) return profileValidationMessage.value;
+    return errorMsg.value;
+});
 
 // Profile Picture Editor State
 const showPfpEditor = ref(false);
@@ -234,7 +244,6 @@ const handleUpdateProfile = async () => {
     try {
         const payload = {
             username: form.value.username.trim(),
-            email: form.value.email.trim(),
             currentPassword: form.value.currentPassword
         };
 
@@ -372,6 +381,10 @@ const handleUpdateProfile = async () => {
     width: 100%;
 }
 
+.password-field-wrap {
+    position: relative;
+}
+
 .form-actions {
     display: flex;
     justify-content: center;
@@ -407,6 +420,7 @@ const handleUpdateProfile = async () => {
     font-size: 0.9rem;
     color: red;
     margin-top: 0;
+    margin-bottom: 0;
 }
 
 /* Profile Picture Editor */

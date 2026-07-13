@@ -205,8 +205,8 @@ describe('ForgotPasswordView.vue', () => {
             let resolveApi;
             apiRequest.post.mockReturnValueOnce(new Promise((resolve) => { resolveApi = resolve; }));
 
-            wrapper.vm.password = 'newpassword123';
-            wrapper.vm.confirmPassword = 'newpassword123';
+            wrapper.vm.password = 'Newpassword123';
+            wrapper.vm.confirmPassword = 'Newpassword123';
             await wrapper.vm.$nextTick();
             wrapper.find('.forgot-password-form').trigger('submit.prevent');
             await wrapper.vm.$nextTick(); // isLoading = true
@@ -220,7 +220,7 @@ describe('ForgotPasswordView.vue', () => {
             expect(apiRequest.post).toHaveBeenCalledWith('/auth/reset-password', {
                 email: 'test@example.com',
                 otp: '123456',
-                newPassword: 'newpassword123',
+                newPassword: 'Newpassword123',
             });
             expect(mockToastAdd).toHaveBeenCalledWith({
                 severity: 'success',
@@ -237,16 +237,24 @@ describe('ForgotPasswordView.vue', () => {
         });
 
         it('should keep the submit button disabled when passwords do not match', async () => {
-            wrapper.vm.password = 'newpassword123';
+            wrapper.vm.password = 'Newpassword123';
             wrapper.vm.confirmPassword = 'differentpassword';
             await wrapper.vm.$nextTick();
 
             expect(wrapper.find('.submit-btn').attributes('disabled')).toBeDefined();
         });
 
-        it('should enable the submit button when passwords match and are non-empty', async () => {
+        it('should keep the submit button disabled when password does not meet policy', async () => {
             wrapper.vm.password = 'newpassword123';
             wrapper.vm.confirmPassword = 'newpassword123';
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.find('.submit-btn').attributes('disabled')).toBeDefined();
+        });
+
+        it('should enable the submit button when passwords match and meet policy', async () => {
+            wrapper.vm.password = 'Newpassword123';
+            wrapper.vm.confirmPassword = 'Newpassword123';
             await wrapper.vm.$nextTick();
 
             expect(wrapper.find('.submit-btn').attributes('disabled')).toBeUndefined();
@@ -256,8 +264,8 @@ describe('ForgotPasswordView.vue', () => {
         it('should set errorMsg and clear loading state if the request fails', async () => {
             apiRequest.post.mockRejectedValueOnce(new Error('Invalid or expired OTP.'));
 
-            wrapper.vm.password = 'newpassword123';
-            wrapper.vm.confirmPassword = 'newpassword123';
+            wrapper.vm.password = 'Newpassword123';
+            wrapper.vm.confirmPassword = 'Newpassword123';
             await wrapper.vm.$nextTick();
             await wrapper.find('.forgot-password-form').trigger('submit.prevent');
             await flushPromises();

@@ -154,4 +154,21 @@ body {
 .p-dialog-content {
   background: transparent !important;
 }
+
+.p-inputtext:disabled,
+.p-password input:disabled,
+.p-inputotp input:disabled {
+  background: var(--p-inputtext-background) !important;
+  border-color: var(--p-inputtext-border-color) !important;
+  color: var(--text-muted) !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: var(--text-muted);
+}
+
+.p-iconfield:has(input:disabled) .p-inputicon,
+.p-password:has(input:disabled) .p-password-toggle-mask-icon,
+.p-password:has(input:disabled) .p-icon {
+  color: var(--text-muted) !important;
+  opacity: 0.5 !important;
+}
 </style>
