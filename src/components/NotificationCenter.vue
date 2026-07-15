@@ -6,15 +6,20 @@
           <section
             v-if="visible"
             class="nc-sheet"
+            :class="{ dragging }"
             role="dialog"
             aria-label="Notifications"
             :style="sheetStyle"
-            @touchstart.passive="onTouchStart"
-            @touchmove="onTouchMove"
-            @touchend="onTouchEnd"
-            @touchcancel="onTouchEnd"
           >
-            <div class="nc-grabber" @click="close"></div>
+            <div
+              class="nc-drag-handle"
+              @pointerdown="onPointerDown"
+              @pointermove="onPointerMove"
+              @pointerup="onPointerEnd"
+              @pointercancel="onPointerEnd"
+            >
+              <div class="nc-grabber"></div>
+            </div>
 
             <header class="nc-head">
               <h2>Notifications</h2>
@@ -128,7 +133,11 @@ const enableHint = computed(() => {
 //load lazily the first time the sheet is opened, and re-check this device's push
 //state each open in case it changed in another tab
 watch(visible, (open) => {
-  if (!open) return;
+  if (!open) {
+    dragging.value = false;
+    activePointerId = null;
+    return;
+  }
   dragY.value = 0;
   expanded.value = false;
   if (!store.loaded) store.load();
@@ -147,7 +156,7 @@ const dragY = ref(0);
 const dragging = ref(false);
 const expanded = ref(false);
 let startY = 0;
-let atTop = false;
+let activePointerId = null;
 
 const sheetStyle = computed(() => ({
   height: expanded.value ? EXPANDED_H : COLLAPSED_H,
@@ -157,29 +166,30 @@ const sheetStyle = computed(() => ({
     : 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), height 0.34s cubic-bezier(0.32, 0.72, 0, 1)',
 }));
 
-function onTouchStart(e) {
-  if (e.touches.length !== 1) return;
-  startY = e.touches[0].clientY;
-  const body = e.currentTarget.querySelector('.nc-body');
-  atTop = !body || body.scrollTop <= 0;
+function onPointerDown(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  activePointerId = e.pointerId;
+  startY = e.clientY;
   dragging.value = true;
+  e.currentTarget.setPointerCapture?.(e.pointerId);
+  e.preventDefault();
 }
 
-function onTouchMove(e) {
-  if (!dragging.value) return;
-  const delta = e.touches[0].clientY - startY;
+function onPointerMove(e) {
+  if (!dragging.value || e.pointerId !== activePointerId) return;
+  const delta = e.clientY - startY;
 
   //pulling up from the top grows a collapsed sheet to full height
-  if (delta < -EXPAND_AFTER && !expanded.value && atTop) {
+  if (delta < -EXPAND_AFTER && !expanded.value) {
     expanded.value = true;
-    startY = e.touches[0].clientY;
+    startY = e.clientY;
     dragY.value = 0;
     e.preventDefault();
     return;
   }
 
   //pulling down from the top follows the finger, ready to shrink or dismiss
-  if (delta > 0 && atTop) {
+  if (delta > 0) {
     dragY.value = delta;
     e.preventDefault();
   } else {
@@ -187,9 +197,11 @@ function onTouchMove(e) {
   }
 }
 
-function onTouchEnd() {
-  if (!dragging.value) return;
+function onPointerEnd(e) {
+  if (!dragging.value || e.pointerId !== activePointerId) return;
+  e.currentTarget.releasePointerCapture?.(e.pointerId);
   dragging.value = false;
+  activePointerId = null;
 
   const pulled = dragY.value;
   if (expanded.value) {
@@ -302,8 +314,19 @@ function relTime(iso) {
   border-radius: 3px;
   background: var(--text-subtle);
   opacity: 0.5;
-  margin: 8px auto 4px;
-  cursor: pointer;
+  margin: 0 auto;
+}
+
+.nc-drag-handle {
+  flex-shrink: 0;
+  padding: 14px 0 8px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.nc-sheet.dragging .nc-drag-handle {
+  cursor: grabbing;
 }
 
 .nc-head {
