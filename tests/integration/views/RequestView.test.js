@@ -40,7 +40,7 @@ const MOCK_LOCATIONS = [
     { id: 1, name: 'LT28' }, { id: 2, name: 'LT27' }, { id: 3, name: 'LT29' },
     { id: 4, name: 'LT1' }, { id: 5, name: 'LT13' }, { id: 6, name: 'COM1' },
     { id: 7, name: 'COM2' }, { id: 8, name: 'AS6' }, { id: 9, name: 'S16' },
-    { id: 10, name: 'UTown' },
+    { id: 10, code: 'UTOWN', name: 'UTown', aliases: ['UT-SRC'] },
 ];
 
 function setupApiMocks(activeRequest = null) {
@@ -72,6 +72,16 @@ describe('RequestView.vue', () => {
 
     //interceptors
     describe('form pre-flight interceptors', () => {
+        it('resolves an exact location alias to its canonical display name', async () => {
+            const wrapper = await mountView();
+
+            wrapper.vm.customLocation = 'UT-SRC';
+            wrapper.vm.validateLocation();
+
+            expect(wrapper.vm.form.deliveryLocation).toBe('UTown');
+            expect(wrapper.vm.locationError).toBe('');
+        });
+
         it('blocks submit and shows an error when delivery location is not in the allowed list', async () => {
             const wrapper = await mountView();
             wrapper.vm.form.deliveryLocation = 'NOWHERE_CAMPUS';

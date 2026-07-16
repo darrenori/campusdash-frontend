@@ -235,7 +235,11 @@ const filteredLocations = computed(() => {
 
     const seen = new Set();
     return locations.value
-        .filter((location) => location.name.toLowerCase().includes(query) || location.code?.toLowerCase().includes(query))
+        .filter((location) =>
+            location.name.toLowerCase().includes(query)
+            || location.code?.toLowerCase().includes(query)
+            || location.aliases?.some((alias) => alias.toLowerCase().includes(query))
+        )
         .filter((location) => {
             const key = location.name.toLowerCase();
             if (seen.has(key)) return false;
@@ -345,7 +349,11 @@ function validateLocation() {
         return;
     }
 
-    const exactMatch = locations.value.find((location) => location.name.toLowerCase() === query || location.code?.toLowerCase() === query);
+    const exactMatch = locations.value.find((location) =>
+        location.name.toLowerCase() === query
+        || location.code?.toLowerCase() === query
+        || location.aliases?.some((alias) => alias.toLowerCase() === query)
+    );
     if (exactMatch) {
         selectLocation(exactMatch.name);
     } else {
