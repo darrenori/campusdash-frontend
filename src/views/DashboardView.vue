@@ -17,9 +17,9 @@
 
         <div class="content-area">
             <MapView v-if="viewMode === 'map'" :requests="visibleRequests" :my-request="myRequest"
-                :current-user-id="authStore.user?.id" :filter-mode="filterMode"
-                :filter-options="requestFilterOptions" :location-available="filterLocationAvailable"
-                @update-filter-mode="filterMode = $event" @select-request="openRequestDrawer" />
+                :current-user-id="authStore.user?.id" :filter-mode="filterMode" :filter-options="requestFilterOptions"
+                :location-available="filterLocationAvailable" @update-filter-mode="filterMode = $event"
+                @select-request="openRequestDrawer" />
             <ListView v-else :requests="visibleRequests" :my-request="myRequest" :loading="loading" :error="error"
                 :accepting-id="acceptingId" :online-user-ids="onlineUserIds" :filter-mode="filterMode"
                 :filter-options="requestFilterOptions" :location-available="filterLocationAvailable"
@@ -45,8 +45,7 @@
             :destination-requests="drawerDestinationRequests" :active="!!myRequest"
             :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" :cancelling="cancelling"
             :completing="completing" :runner-online="runnerOnline" @accept="acceptRequest" @cancel="handleDrawerCancel"
-            @complete="completeOrder" @collected="markCollected" @chat="openChat"
-            @select-request="openRequestDrawer" />
+            @complete="completeOrder" @collected="markCollected" @chat="openChat" @select-request="openRequestDrawer" />
 
         <BottomNav />
 
@@ -71,6 +70,7 @@ import { getSocket } from '../utils/socket';
 import { useAuthStore } from '../stores/auth';
 import { useRequestStore } from '../stores/requests';
 import { useMessagesStore } from '../stores/messages';
+import { timetableLessons, computeNextLocation } from '../utils/timetable';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -95,6 +95,15 @@ let dashboardGeoWatchId = null;
 let nextClassRefreshTimer = null;
 
 const filterLocationAvailable = computed(() => Boolean(currentLocation.value));
+
+const nextClass = computed(() => {
+    const lessons = timetableLessons(authStore.user);
+    return lessons ? computeNextLocation(lessons) : null;
+});
+
+const nextClassDestination = computed(() => (
+    nextClass.value?.venueCode || nextClass.value?.venue || null
+));
 
 const requestFilterOptions = computed(() => [
     {
@@ -158,7 +167,7 @@ async function acceptRequest(id) {
 }
 
 async function loadNextClassRequests() {
-    if (!currentLocation.value) {
+    if (!currentLocation.value || !nextClassDestination.value) {
         nextClassRequests.value = [];
         return;
     }
@@ -166,6 +175,7 @@ async function loadNextClassRequests() {
     const query = new URLSearchParams({
         lat: String(currentLocation.value.lat),
         lng: String(currentLocation.value.lng),
+        destination: nextClassDestination.value,
     });
 
     try {
@@ -484,6 +494,10 @@ watch(
         refreshNextClassRequestsSoon();
     }
 );
+
+watch(nextClassDestination, () => {
+    refreshNextClassRequestsSoon();
+});
 
 const cancelling = ref(false);
 
