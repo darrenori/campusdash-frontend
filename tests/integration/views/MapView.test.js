@@ -76,7 +76,10 @@ jest.mock('vue3-google-map', () => {
                         {
                             class: 'advanced-marker-stub',
                             'data-title': props.options?.title || '',
-                            onClick: () => emit('click'),
+                            onClick: (event) => {
+                                event.stopPropagation();
+                                emit('click');
+                            },
                         },
                         slots.content?.() || slots.default?.() || props.options?.title || ''
                     );
@@ -279,6 +282,14 @@ describe('MapView.vue', () => {
     });
 
     describe('open order markers', () => {
+        it('emits map-background-click when a non-pin map area is clicked', async () => {
+            wrapper = mountMap();
+
+            await wrapper.find('.google-map-stub').trigger('click');
+
+            expect(wrapper.emitted('map-background-click')).toHaveLength(1);
+        });
+
         it('displays pins for all open orders when there is no active request', () => {
             wrapper = mountMap();
 
@@ -296,6 +307,7 @@ describe('MapView.vue', () => {
 
             expect(wrapper.emitted('select-request')).toHaveLength(1);
             expect(wrapper.emitted('select-request')[0]).toEqual([openRequests[0]]);
+            expect(wrapper.emitted('map-background-click')).toBeUndefined();
         });
 
         it('groups open orders with the same destination under one pin', () => {

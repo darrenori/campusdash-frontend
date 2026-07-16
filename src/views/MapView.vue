@@ -2,7 +2,8 @@
     <div class="map-view">
         <GoogleMap :key="themeStore.isDark ? 'dark-map' : 'light-map'" ref="mapRef" :api-key="apiKey" :map-id="mapId"
             class="google-map" :center="mapCenter" :zoom="16" :disable-default-ui="true" :clickable-icons="false"
-            :keyboard-shortcuts="false" :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'">
+            :keyboard-shortcuts="false" :color-scheme="themeStore.isDark ? 'DARK' : 'LIGHT'"
+            @click="$emit('map-background-click')">
 
             <div v-if="!myRequest" class="map-filter-controls">
                 <button v-for="option in filterOptions" :key="option.key" type="button" class="map-filter-btn"
@@ -110,7 +111,7 @@ const props = defineProps({
     },
 });
 
-defineEmits(['select-request', 'update-filter-mode']);
+defineEmits(['select-request', 'update-filter-mode', 'map-background-click']);
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
