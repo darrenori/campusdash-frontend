@@ -226,11 +226,32 @@ const handleOtpSubmit = async () => {
     display: flex;
     justify-content: center;
     margin-bottom: 1.5rem;
+    animation: introRise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.content-wrapper>.register-form {
+    animation: introRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+}
+
+.content-wrapper>.step-container {
+    animation: introRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
 }
 
 .cd-logo {
     width: 100%;
     align-self: center;
+}
+
+@keyframes introRise {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .instruction-container {
@@ -259,6 +280,7 @@ const handleOtpSubmit = async () => {
     height: 15vh;
     object-fit: fill;
     pointer-events: none;
+    animation: waveRevealTop 0.6s cubic-bezier(0.16, 1, 0.3, 1) both, waveDriftTop 8s ease-in-out 0.6s infinite;
 }
 
 .bottom-waves {
@@ -269,6 +291,51 @@ const handleOtpSubmit = async () => {
     height: 15vh;
     object-fit: fill;
     pointer-events: none;
+    animation: waveRevealBottom 0.6s cubic-bezier(0.16, 1, 0.3, 1) both, waveDriftBottom 8s ease-in-out 0.6s infinite;
+}
+
+@keyframes waveRevealTop {
+    from {
+        transform: translateY(-100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes waveRevealBottom {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes waveDriftTop {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes waveDriftBottom {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(4px);
+    }
 }
 
 /* 
@@ -363,6 +430,19 @@ const handleOtpSubmit = async () => {
     font-size: 1rem;
     width: 100%;
     padding: 0.8rem 2.5rem;
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-btn:not(:disabled):hover,
+.register-btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.login-btn:not(:disabled):active,
+.register-btn:not(:disabled):active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .register-btn {
@@ -380,5 +460,21 @@ const handleOtpSubmit = async () => {
     background-color: var(--color-accent);
     color: white;
     border: 1px solid var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .logo-container,
+    .content-wrapper>.register-form,
+    .content-wrapper>.step-container,
+    .top-waves,
+    .bottom-waves {
+        animation: none;
+    }
+
+    .login-btn,
+    .register-btn {
+        transition: none;
+    }
 }
 </style>
