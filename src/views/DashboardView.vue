@@ -1,7 +1,7 @@
 <template>
     <div class="app-screen">
         <div class="view-toggle-wrapper">
-            <div class="segmented-control">
+            <div class="segmented-control" data-tour="view-toggle">
                 <button class="segment-btn" :class="{ active: viewMode === 'map' }" @click="viewMode = 'map'">
                     Map
                 </button>
@@ -26,7 +26,7 @@
                 @update-filter-mode="filterMode = $event" @accept-request="acceptRequest" />
         </div>
 
-        <button v-if="!loading && !myRequest" class="request-btn" @click="router.push('/request')">
+        <button v-if="!loading && !myRequest" class="request-btn" data-tour="request" @click="router.push('/request')">
             <span class="request-icon">+</span>
             <span>Request</span>
         </button>

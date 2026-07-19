@@ -4,6 +4,7 @@
 
     <AchievementToastListener v-if="authStore.isAuthenticated" :key="authStore.user?.id" />
     <NotificationsListener v-if="authStore.isAuthenticated" :key="`notif-${authStore.user?.id}`" />
+    <OnboardingTour v-if="authStore.isAuthenticated" :user-id="authStore.user?.id" />
 
     <router-view />
   </div>
@@ -19,6 +20,7 @@ import { useNotificationsStore } from './stores/notifications';
 import Toast from 'primevue/toast';
 import AchievementToastListener from './components/AchievementToastListener.vue';
 import NotificationsListener from './components/NotificationsListener.vue';
+import OnboardingTour from './components/OnboardingTour.vue';
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();

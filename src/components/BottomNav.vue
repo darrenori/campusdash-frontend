@@ -10,7 +10,7 @@
       <span class="label">History</span>
     </router-link>
 
-    <div class="nav-item points-nav-item">
+    <div class="nav-item points-nav-item" data-tour="nav-points">
       <div class="points-badge">
         <span class="star"><i class="pi pi-star-fill"></i></span>
         <span class="points-text">
@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <router-link to="/messages" class="nav-item">
+    <router-link to="/messages" class="nav-item" data-tour="nav-messages">
       <span class="icon">
         <i class="pi pi-comments"></i>
         <span v-if="messagesStore.totalUnread > 0" class="nav-badge"
@@ -30,7 +30,7 @@
       <span class="label">Messages</span>
     </router-link>
 
-    <router-link to="/profile" class="nav-item">
+    <router-link to="/profile" class="nav-item" data-tour="nav-profile">
       <span class="icon"><i class="pi pi-user"></i></span>
       <span class="label">Profile</span>
     </router-link>
