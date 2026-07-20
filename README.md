@@ -8,7 +8,9 @@
 - **Routing:** Vue Router v5
 - **UI Components:** PrimeVue
 - **Maps:** vue3-google-map / Google Maps JavaScript API
+- **Timetable Data:** NUSMods API
 - **Real-Time Communications:** Socket.io Client
+- **Push Notifications:** Service Worker / Web Push API
 
 ## Setup
 
@@ -20,6 +22,8 @@
 A sample of the required environment variables can be found in the `sample.env` file.
 
 **Notes:** For the `VITE_GOOGLE_MAPS_MAP_ID` environment variable, you may choose to leave it as `DEMO_MAP_ID`. This environment variable exists only to enable advanced markers as stated on https://developers.google.com/maps/documentation/javascript/map-ids/mapid-over.
+
+**WebSocket Notes:** `VITE_SOCKET_URL` is optional. When omitted, development uses the backend URL with the `/api` suffix removed, while production uses the current site origin. Set it explicitly only when Socket.io is hosted at a different origin.
 
 **Important:** To prevent the browser from blocking cross-origin HttpOnly session cookies during local testing, your frontend and backend domains must match. If you access the frontend via `https://localhost:5173`, your `.env` URLs must also use `localhost`. Note that HTTPS is used instead of HTTP.
 
@@ -54,21 +58,24 @@ The application will then need to be accessed at `https://<IP_ADDRESS>:5173`.
 - `vite.config.js` proxies `/api`, `/uploads`, and `/socket.io` to `VITE_BACKEND_PROXY_URL` during development.
 - In production, `VITE_BACKEND_URL` defaults to `/api` when a relative API path is required.
 - `VITE_FILE_SERVER_URL` is used to resolve relative upload paths returned by the backend.
+- `VITE_SOCKET_URL` may be used when the Socket.io server is hosted separately from the API.
 - `vercel.json` and `public/404.html` support SPA routing during deployment.
 - `GITHUB_PAGES_BASE` may be used to override the Vite base path.
+- `public/sw.js` handles background Web Push notifications and notification click navigation. It does not cache application files for offline use.
 
 ## Core Architecture
 
 ### Views Available (`src/views/`)
 
-- `DashboardView.vue` (`/`): The core authenticated interface. Displays the map/list discovery toggle, active order drawer, live request updates, presence, and chat entry points.
+- `DashboardView.vue` (`/`): The core authenticated interface. Displays the map/list discovery toggle, All/Next Class request filters, active order drawer, live request updates, presence, and chat entry points.
 - `ListView.vue`: The interface displaying all active orders in a list form. Used by `DashboardView.vue`.
 - `MapView.vue`: The Google Maps interface displaying open request markers, pickup/dropoff markers, buyer/runner live locations, and runner walking routes. Used by `DashboardView.vue`
 - `LoginView.vue` (`/login`): The login page for unauthenticated users.
-- `RegisterView.vue` (`/register`): Account creation page for new users.
+- `RegisterView.vue` (`/register`): Account creation page for new users. Restricts registration to `@u.nus.edu` email addresses and verifies new accounts using a 15-minute, 6-digit OTP.
 - `ForgotPasswordView.vue` (`/forgot-password`): Page for resetting passwords. Contains 3 steps (Input Email, Input OTP, Input New Password).
-- `ProfileView.vue` (`/profile`): Profile page for toggling Dark/Light mode, editing user information, Profile Picture, PayNow QR code, and selecting displayed badges.
+- `ProfileView.vue` (`/profile`): Profile page for toggling Dark/Light mode, editing user information, Profile Picture, PayNow QR code, selecting displayed badges, managing a NUSMods timetable, and enabling push notifications.
 - `RequestView.vue` (`/request`): Form for requesting orders.
+- `TimetableView.vue` (`/timetable`): Imports a NUSMods timetable share link, displays resolved lesson venues, determines the user's next class location, and supports timetable updates/removal.
 - `HistoryView.vue` (`/history`): Order history page with active orders, past orders, requester/runner filters, and pagination.
 - `MessagesView.vue` (`/messages`): Messaging interface with conversation list, active chat threads, unread counts, typing indicators, image messages, and linked order actions.
 
@@ -82,6 +89,11 @@ The application will then need to be accessed at `https://<IP_ADDRESS>:5173`.
 - `DeliveryRequestDrawer.vue`: The order detail drawer used by the dashboard map/list views. Handles accept, cancel, collected, complete, and chat actions.
 - `EditProfile.vue`: The form for editing user profile information. Used by `ProfileView.vue`.
 - `EditPayNow.vue`: The modal for uploading PayNow QR codes. Used by `ProfileView.vue`.
+- `NotificationBell.vue`: Displays the notification entry point and unread notification count.
+- `NotificationCenter.vue`: Displays paginated order notifications, read state, and controls for enabling or disabling Web Push on the current device.
+- `NotificationsListener.vue`: Listens for real-time order, arrival, and chat notification events and displays local notifications when appropriate.
+- `PasswordRequirementsHint.vue`: Displays the shared password policy requirements used by registration, password reset, and profile editing forms.
+- `TimetableCard.vue`: Displays the saved timetable and next class summary on the profile page.
 - `UserProfileDialog.vue`: Displays public user profile information and displayed badges.
 - `messages/ConversationList.vue`: Lists conversations, unread state, last messages, and online status.
 - `messages/ConversationView.vue`: Displays a selected conversation with timeline order segments.
@@ -94,7 +106,7 @@ The application will then need to be accessed at `https://<IP_ADDRESS>:5173`.
 The routing layer implements authentication utilising route metadata attributes (`meta: { requiresAuth: true/false }`)
 
 - **Session Rehydration:** The `beforeEach` navigation guard checks the backend (`GET /auth/me`) using an initialisation flag (`hasCheckedAuth`). If a valid HTTP-only cookie exists, users will remain authenticated and be allowed to traverse all authenticated routes.
-- **Protected Routes:** `/`, `/request`, `/history`, `/messages`, and `/profile` require an active session.
+- **Protected Routes:** `/`, `/request`, `/timetable`, `/history`, `/messages`, and `/profile` require an active session.
 - **Public Routes:** `/login`, `/register`, and `/forgot-password` redirect authenticated users back to `/`.
 - **Catchall Routes:** `/discover` and unknown routes redirect to `/`.
 
@@ -122,6 +134,11 @@ The following lists the Pinia stores available:
   - **`markRead(id)` / `sendTyping(id)` / `sendStopTyping(id)`**: Sends read receipts and typing events.
   - **`startConversation(userId, requestId)` / `deleteConversation(id)`**: Creates or clears conversations.
   - **`completeOrder(id, orderId)` / `markPickedUp(id, orderId)`**: Performs linked order actions from chat.
+- **`notifications.js`:** Handles persistent notifications, unread counts, Socket.io updates, and per-device Web Push subscriptions using the following functions:
+  - **`init()` / `teardown()` / `reset()`**: Binds or clears notification socket listeners and local state.
+  - **`load()` / `loadMore()`**: Loads notifications using keyset pagination.
+  - **`markRead(ids)` / `markAllRead()`**: Updates notification read state.
+  - **`refreshPushState()` / `enable()` / `disable()`**: Manages the current device's browser push subscription.
 
 ### Utilities (`src/utils/`)
 
@@ -134,11 +151,14 @@ The following utilities are available:
   - `postFormData(endpoint, formData)`: Sends a `POST` request to the endpoint with a FormData object, and returns the response JSON object.
   - `delete(endpoint)`: Sends a `DELETE` request to the endpoint, and returns the response JSON object.
   - `put(endpoint, data, config)`: Sends a PUT request to the endpoint with JSON data, optionally accepts a config object to toggle auto-logout, and returns the response JSON object.
-- `socket.js`: Handles socket connections to the backend server stated in the `.env` file under the property `VITE_BACKEND_URL`. The WebSocket URL is resolved by stripping the `/api` path from the environment variable. Implements the following methods:
+- `socket.js`: Handles authenticated Socket.io connections. `VITE_SOCKET_URL` may explicitly set the Socket.io origin; otherwise development removes `/api` from `VITE_BACKEND_URL`, while production uses the current site origin and obtains a short-lived token from `/auth/socket-token`. Implements the following methods:
   - `getSocket()`: Returns a Socket.io instance.
   - `disconnectSocket()`: Disconnects and clears the current Socket.io instance.
 - `fileUrl.js`: Resolves relative upload paths against `VITE_FILE_SERVER_URL`, while leaving absolute URLs untouched.
 - `achievementToast.js`: Displays toast notifications when badges are unlocked.
+- `passwordPolicy.js`: Provides the shared password-strength rules and requirement labels used by authentication and profile forms.
+- `push.js`: Registers the service worker, requests notification permission, and creates/removes browser Web Push subscriptions.
+- `timetable.js`: Parses NUSMods timetable share links, retrieves lesson data from the NUSMods API, maps lesson venues to CampusDash delivery locations, and determines the next class destination.
 
 ## Testing
 
@@ -157,9 +177,11 @@ npm test
   - **Theme Store:** Ensures proper toggling of light/dark modes, `data-theme` DOM attribute updates, and `localStorage` persistence.
   - **Request Store:** Validates the tracking, replacing, and clearing of active order requests.
   - **Messages Store:** Validates conversation state, unread counts, socket-driven events, and message lifecycle behaviour.
+  - **Notifications Store:** Validates notification loading, unread counts, and individual/all read-state updates.
 
 - **Utilities (`src/utils/`)**
   - **API Utility:** Tests standard REST methods (GET, POST, PATCH, PUT, DELETE, postFormData) and session-expiry handling.
+  - **Password Policy:** Shared password requirements are exercised through registration, password reset, and profile component tests.
 
 - **Components (`src/components/`)**
   - **CancelPanel:** Validates cancellation reason constraints and UI state.
@@ -168,7 +190,7 @@ npm test
   - **MessageBubble / MessageComposer:** Validates message rendering, sending, typing, and image attachment interactions.
 
 - **Views (`src/views/`)**
-  - **Authentication (Login/Register):** Tests form validation constraints (e.g., password matching, username length limits), loading state UI changes, toast notification triggers, and successful router redirections.
+  - **Authentication (Login/Register):** Tests username/email login, NUS email registration, password policy enforcement, registration OTP verification, loading state UI changes, toast notification triggers, and successful router redirections.
   - **Forgot Password:** Validates the 3-step flow (Email -> OTP -> New Password), ensuring the submit buttons remain locked until conditions are met.
   - **Request View:** Tests validation logic and the multi-step UI state (Finding Runner -> Runner Found -> Delivery Accepted).
   - **Map View:** Tests Google Maps integration boundaries, marker behaviour, live location handling, and route calculation guards.
@@ -179,3 +201,4 @@ npm test
 - The `api.js` utility's functions include `credentials: 'include'` as part of its request options. This is mandatory to pass cross-origin HTTP-only session cookies.
 - The `PUT` request handler in `api.js` accepts a `{ autoLogout: Boolean }` parameter to control whether the user should be logged out upon receiving a 401 error code. This is required as an incorrect current password on the `EditProfile.vue` form results in a 401 error, which does not necessitate the logging out of the user.
 - The `socket.js` utility includes `withCredentials: true` during initialisation. Similar to the API utility, this ensures that cross-origin HTTP-only session cookies are passed during the initial WebSocket handshake.
+- Web Push requires a secure browser context. Local development uses `https://localhost:5173`; on iOS, Web Push is available only after the PWA has been added to the Home Screen.
