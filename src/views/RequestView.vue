@@ -227,6 +227,23 @@ const unsupportedTextPattern = /[<>\u0000-\u001F\u007F]|\b(?:https?:\/\/|www\.|j
 
 const catalog = ref([]);
 
+function locationSearchRank(location, query) {
+    const code = String(location.code || '').toLowerCase();
+    const name = String(location.name || '').toLowerCase();
+    const aliases = Array.isArray(location.aliases)
+        ? location.aliases.map((alias) => String(alias).toLowerCase())
+        : [];
+
+    if (code === query || name === query || aliases.includes(query)) return 0;
+    if (code.startsWith(query)) return 1;
+    if (name.startsWith(query)) return 2;
+    if (aliases.some((alias) => alias.startsWith(query))) return 3;
+    if (code.includes(query)) return 4;
+    if (name.includes(query)) return 5;
+    if (aliases.some((alias) => alias.includes(query))) return 6;
+    return Number.POSITIVE_INFINITY;
+}
+
 const canteenOptions = computed(() => catalog.value);
 const presetLocations = computed(() => locations.value.slice(0, 10).map((location) => location.name));
 const filteredLocations = computed(() => {
@@ -235,14 +252,29 @@ const filteredLocations = computed(() => {
 
     const seen = new Set();
     return locations.value
-        .filter((location) => location.name.toLowerCase().includes(query) || location.code?.toLowerCase().includes(query))
-        .filter((location) => {
+        .map((location, index) => ({
+            location,
+            index,
+            rank: locationSearchRank(location, query),
+        }))
+        .filter((result) => Number.isFinite(result.rank))
+        .sort((a, b) =>
+            a.rank - b.rank
+            || String(a.location.code || a.location.name).localeCompare(
+                String(b.location.code || b.location.name),
+                undefined,
+                { numeric: true, sensitivity: 'base' }
+            )
+            || a.index - b.index
+        )
+        .filter(({ location }) => {
             const key = location.name.toLowerCase();
             if (seen.has(key)) return false;
             seen.add(key);
             return true;
         })
-        .slice(0, 6);
+        .slice(0, 6)
+        .map(({ location }) => location);
 });
 const stallOptions = computed(() => {
     const canteen = catalog.value.find((c) => c.id === form.value.canteenId);
@@ -345,7 +377,11 @@ function validateLocation() {
         return;
     }
 
-    const exactMatch = locations.value.find((location) => location.name.toLowerCase() === query || location.code?.toLowerCase() === query);
+    const exactMatch = locations.value.find((location) =>
+        location.name.toLowerCase() === query
+        || location.code?.toLowerCase() === query
+        || location.aliases?.some((alias) => alias.toLowerCase() === query)
+    );
     if (exactMatch) {
         selectLocation(exactMatch.name);
     } else {
