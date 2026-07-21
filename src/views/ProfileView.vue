@@ -48,7 +48,7 @@
                         <span>Edit Info</span>
                     </button>
 
-                    <button class="action-btn" @click="showQrModal = true">
+                    <button class="action-btn" data-tour="paynow-upload" @click="showQrModal = true">
                         <i class="pi pi-qrcode"></i>
                         <span>PayNow</span>
                     </button>
@@ -56,6 +56,7 @@
                     <button
                         v-if="notifications.supported"
                         class="action-btn"
+                        data-tour="notifications"
                         :class="{ 'is-on': notifications.pushEnabled }"
                         :disabled="notifications.busy"
                         @click="toggleNotifications"

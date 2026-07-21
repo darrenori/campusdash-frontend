@@ -1,5 +1,5 @@
 <template>
-    <button type="button" class="timetable-tile" @click="router.push('/timetable')">
+    <button type="button" class="timetable-tile" data-tour="timetable-card" @click="router.push('/timetable')">
         <div class="tile-icon">
             <i class="pi pi-map-marker"></i>
         </div>

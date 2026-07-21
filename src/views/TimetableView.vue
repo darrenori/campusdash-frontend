@@ -5,7 +5,8 @@
                 <i class="pi pi-chevron-left"></i>
             </button>
             <h1 class="topbar-title">Timetable</h1>
-            <button v-if="timetable" type="button" class="edit-link" @click="openInput">Edit</button>
+            <button v-if="timetable" type="button" class="edit-link" data-tour="timetable-input"
+                @click="openInput">Edit</button>
             <span v-else class="topbar-spacer"></span>
         </header>
 
@@ -25,7 +26,7 @@
             </section>
 
             <!-- URL input (add / edit) -->
-            <section v-if="showInput || !timetable" class="input-card">
+            <section v-if="showInput || !timetable" class="input-card" data-tour="timetable-input">
                 <p class="input-heading">{{ timetable ? 'Update timetable' : 'Add your timetable' }}</p>
                 <p class="input-help">
                     In NUSMods, open your timetable → <strong>Share/Sync</strong> → copy the link and paste it here.

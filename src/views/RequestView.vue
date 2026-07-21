@@ -12,7 +12,7 @@
             </div>
 
             <!-- Delivery location picker -->
-            <div v-if="!activeLoading && !activeRequest" class="location-wrap">
+            <div v-if="!activeLoading && !activeRequest" class="location-wrap" data-tour="request-location">
                 <span class="location-caption">Deliver to</span>
                 <button type="button" class="location-btn" :class="{ nudge: showLocationNudge }"
                     @click="toggleLocationMenu">
@@ -120,7 +120,7 @@
 
         <!-- Form -->
         <form v-else class="req-form" @submit.prevent="submit">
-            <div class="field">
+            <div class="field" data-tour="request-details">
                 <label for="canteen">Requested Canteen</label>
                 <div class="select-wrap">
                     <select id="canteen" v-model="form.canteenId" required @change="onCanteenChange">
@@ -166,7 +166,7 @@
 
             <p v-if="error" class="form-error">{{ error }}</p>
 
-            <button type="submit" class="submit-btn" :disabled="submitting">
+            <button type="submit" class="submit-btn" data-tour="request-submit" :disabled="submitting">
                 {{ submitting ? 'Submitting…' : 'Submit Request' }}
             </button>
         </form>
