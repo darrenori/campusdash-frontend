@@ -19,7 +19,12 @@ const resolveSocketUrl = () => {
     const envSocketUrl = import.meta.env.VITE_SOCKET_URL;
 
     if (import.meta.env.DEV) {
-        return normalizeBaseUrl(envSocketUrl || BACKEND_URL.replace(/\/api$/, ''));
+        if (envSocketUrl) return normalizeBaseUrl(envSocketUrl);
+        const derived = BACKEND_URL.replace(/\/api$/, '');
+        //a relative backend ('/api') strips down to an empty host; dial the dev
+        //origin instead so vite's /socket.io ws proxy carries the handshake and
+        //the auth cookie through to the backend
+        return derived && !isRelativeUrl(derived) ? normalizeBaseUrl(derived) : window.location.origin;
     }
 
     if (envSocketUrl && !isRelativeUrl(envSocketUrl)) {

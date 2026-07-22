@@ -385,7 +385,8 @@ export const useMessagesStore = defineStore('messages', () => {
         const convo = conversations.value.find((c) => c.id === conversationId);
         const id = orderId ?? convo?.order?.id;
         if (!id) throw new Error('No order linked to this conversation.');
-        const { request } = await apiRequest.patch(`/requests/${id}/complete`, {});
+        const { request, points } = await apiRequest.patch(`/requests/${id}/complete`, {});
+        auth.setPoints(points);
         applyOrderUpdate(conversationId, request ? { id, ...request } : { id });
         return request;
     }
