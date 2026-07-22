@@ -302,7 +302,6 @@ function onCompleted({ id }) {
         clearActiveOrder()
 
         if (wasDeliverer) {
-            authStore.adjustPoints?.(1);
             authStore.incrementDeliveries();
 
             toast.add({

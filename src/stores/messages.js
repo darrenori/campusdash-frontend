@@ -156,6 +156,13 @@ export const useMessagesStore = defineStore('messages', () => {
         lastError.value = error || 'Something went wrong.';
     }
 
+    // The server pushes the current user's authoritative balance whenever it
+    // changes (order completed/cancelled). Bound globally so points stay live
+    // regardless of which screen the user is on.
+    function onPointsUpdated({ points } = {}) {
+        auth.setPoints(points);
+    }
+
     // Another tab/device of ours deleted a conversation — mirror it locally.
     function onConversationCleared({ conversationId }) {
         removeConversationLocally(conversationId);
@@ -198,6 +205,7 @@ export const useMessagesStore = defineStore('messages', () => {
         socket.on('messages:stopTyping', onStopTyping);
         socket.on('messages:error', onError);
         socket.on('messages:conversationCleared', onConversationCleared);
+        socket.on('points:updated', onPointsUpdated);
         // Keep the linked-order status fresh when the order changes elsewhere.
         socket.on('request:accepted', onOrderEvent);
         socket.on('request:completed', onOrderEvent);
@@ -221,6 +229,7 @@ export const useMessagesStore = defineStore('messages', () => {
         socket.off('messages:stopTyping', onStopTyping);
         socket.off('messages:error', onError);
         socket.off('messages:conversationCleared', onConversationCleared);
+        socket.off('points:updated', onPointsUpdated);
         socket.off('request:accepted', onOrderEvent);
         socket.off('request:completed', onOrderEvent);
         socket.off('request:collected', onOrderEvent);

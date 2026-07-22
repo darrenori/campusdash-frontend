@@ -593,9 +593,6 @@ function onCancelled({ id, reason, cancelledBy }) {
 
 function onCompleted({ id }) {
     if (id !== activeRequest.value?.id) return;
-    if (isDeliverer.value) {
-        authStore.adjustPoints(1);
-    }
     activeRequest.value = null;
     requestStore.clearActiveRequest();
     runnerOnline.value = false;
