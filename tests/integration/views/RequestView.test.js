@@ -302,5 +302,29 @@ describe('RequestView.vue', () => {
                 reason: 'Running late, cannot make it',
             });
         });
+
+        it('hides cancellation from the buyer after the runner collects the order', async () => {
+            const wrapper = await mountView({
+                ...acceptedRequest,
+                collectedAt: '2026-06-08T15:30:00.000Z',
+            });
+
+            expect(wrapper.find('.cancel-btn').exists()).toBe(false);
+        });
+
+        it('keeps cancellation available to the runner after collecting the order', async () => {
+            localStorage.clear();
+            localStorage.setItem('userData', JSON.stringify(DEFAULT_USER));
+            setActivePinia(createPinia());
+
+            const wrapper = await mountView({
+                ...acceptedRequest,
+                requester: { id: 2, name: 'buyer' },
+                deliverer: { id: 1, name: 'tester' },
+                collectedAt: '2026-06-08T15:30:00.000Z',
+            });
+
+            expect(wrapper.find('.cancel-btn').exists()).toBe(true);
+        });
     });
 });

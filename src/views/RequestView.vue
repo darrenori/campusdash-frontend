@@ -287,7 +287,12 @@ const currentUserId = computed(() => authStore.user?.id ?? authStore.user?.userI
 const isRequester = computed(() => Number(activeRequest.value?.requester?.id) === Number(currentUserId.value));
 const isDeliverer = computed(() => Number(activeRequest.value?.deliverer?.id) === Number(currentUserId.value));
 const needsCancelReason = computed(() => activeRequest.value?.status === 'accepted');
-const canCancelOrder = computed(() => ['open', 'accepted'].includes(activeRequest.value?.status));
+const canCancelOrder = computed(() => {
+    if (activeRequest.value?.status === 'open') return isRequester.value;
+    if (activeRequest.value?.status !== 'accepted') return false;
+
+    return isDeliverer.value || (isRequester.value && !activeRequest.value.collectedAt);
+});
 
 const deliveryActionText = computed(() => {
     if (completing.value) return isRequester.value ? 'COMPLETING...' : 'SAVING...';

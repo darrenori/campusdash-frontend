@@ -248,7 +248,10 @@ const showCancelReason = ref(false);
 const needsCancelReason = computed(() => props.request?.status === 'accepted');
 
 const canCancelOrder = computed(() => {
-    return ['open', 'accepted'].includes(props.request?.status);
+    if (props.request?.status === 'open') return isRequester.value;
+    if (props.request?.status !== 'accepted') return false;
+
+    return isDeliverer.value || (isRequester.value && !props.request.collectedAt);
 });
 
 function openCancelReason() {

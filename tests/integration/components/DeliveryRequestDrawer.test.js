@@ -450,6 +450,28 @@ describe('DeliveryRequestDrawer.vue', () => {
             expect(wrapper.find('.complete-btn').attributes('disabled')).toBeDefined();
             expect(wrapper.find('.complete-btn').text()).toBe('ORDER PICKED UP');
         });
+
+        it('hides cancellation from the buyer after the order has been picked up', () => {
+            wrapper = mountDrawer({
+                request: createAcceptedRequest({
+                    collectedAt: '2026-06-08T15:30:00.000Z',
+                }),
+                user: buyer,
+            });
+
+            expect(wrapper.find('.cancel-btn').exists()).toBe(false);
+        });
+
+        it('keeps cancellation available to the runner after the order has been picked up', () => {
+            wrapper = mountDrawer({
+                request: createAcceptedRequest({
+                    collectedAt: '2026-06-08T15:30:00.000Z',
+                }),
+                user: runner,
+            });
+
+            expect(wrapper.find('.cancel-btn').exists()).toBe(true);
+        });
     });
 
     describe('pickup time', () => {
