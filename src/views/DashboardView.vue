@@ -19,7 +19,7 @@
             <MapView v-if="viewMode === 'map'" :requests="visibleRequests" :my-request="myRequest"
                 :current-user-id="authStore.user?.id" :filter-mode="filterMode" :filter-options="requestFilterOptions"
                 :location-available="filterLocationAvailable" @update-filter-mode="filterMode = $event"
-                @select-request="openRequestDrawer" @map-background-click="closeRequestDrawer" />
+                @select-request="openRequestDrawer" @map-background-click="handleMapBackgroundClick" />
             <ListView v-else :requests="visibleRequests" :my-request="myRequest" :loading="loading" :error="error"
                 :accepting-id="acceptingId" :online-user-ids="onlineUserIds" :filter-mode="filterMode"
                 :filter-options="requestFilterOptions" :location-available="filterLocationAvailable"
@@ -44,8 +44,9 @@
         <DeliveryRequestDrawer :visible="drawerVisible" :request="drawerRequest"
             :destination-requests="drawerDestinationRequests" :active="!!myRequest"
             :accepting="Boolean(drawerRequest && acceptingId === drawerRequest.id)" :cancelling="cancelling"
-            :completing="completing" :runner-online="runnerOnline" @accept="acceptRequest" @cancel="handleDrawerCancel"
-            @complete="completeOrder" @collected="markCollected" @chat="openChat" @select-request="openRequestDrawer" />
+            :completing="completing" :runner-online="runnerOnline" :collapse-signal="drawerCollapseSignal"
+            @accept="acceptRequest" @cancel="handleDrawerCancel" @complete="completeOrder" @collected="markCollected"
+            @chat="openChat" @select-request="openRequestDrawer" />
 
         <BottomNav />
 
@@ -408,14 +409,14 @@ async function markCollected(request) {
 
 // Drawer Stuff
 const selectedMapRequest = ref(null);
-const drawerDismissed = ref(false);
+const drawerCollapseSignal = ref(0);
 
 const drawerRequest = computed(() => {
     return myRequest.value || selectedMapRequest.value;
 });
 
 const drawerVisible = computed(() => {
-    return Boolean(drawerRequest.value) && !drawerDismissed.value;
+    return Boolean(drawerRequest.value);
 });
 
 function isSameDestination(left, right) {
@@ -440,12 +441,19 @@ const drawerDestinationRequests = computed(() => {
 
 function openRequestDrawer(request) {
     selectedMapRequest.value = request;
-    drawerDismissed.value = false;
 }
 
 function closeRequestDrawer() {
     selectedMapRequest.value = null;
-    drawerDismissed.value = true;
+}
+
+function handleMapBackgroundClick() {
+    if (myRequest.value) {
+        drawerCollapseSignal.value += 1;
+        return;
+    }
+
+    closeRequestDrawer();
 }
 
 function startDashboardLocationTracking() {

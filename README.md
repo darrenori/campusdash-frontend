@@ -92,6 +92,7 @@ The application will then need to be accessed at `https://<IP_ADDRESS>:5173`.
 - `NotificationBell.vue`: Displays the notification entry point and unread notification count.
 - `NotificationCenter.vue`: Displays paginated order notifications, read state, and controls for enabling or disabling Web Push on the current device.
 - `NotificationsListener.vue`: Listens for real-time order, arrival, and chat notification events and displays local notifications when appropriate.
+- `OnboardingTour.vue`: Displays the guided tutorial for new users and highlights key controls across the application.
 - `PasswordRequirementsHint.vue`: Displays the shared password policy requirements used by registration, password reset, and profile editing forms.
 - `TimetableCard.vue`: Displays the saved timetable and next class summary on the profile page.
 - `UserProfileDialog.vue`: Displays public user profile information and displayed badges.
@@ -156,6 +157,7 @@ The following utilities are available:
   - `disconnectSocket()`: Disconnects and clears the current Socket.io instance.
 - `fileUrl.js`: Resolves relative upload paths against `VITE_FILE_SERVER_URL`, while leaving absolute URLs untouched.
 - `achievementToast.js`: Displays toast notifications when badges are unlocked.
+- `onboarding.js`: Checks and stores the tutorial completion flag in `localStorage`.
 - `passwordPolicy.js`: Provides the shared password-strength rules and requirement labels used by authentication and profile forms.
 - `push.js`: Registers the service worker, requests notification permission, and creates/removes browser Web Push subscriptions.
 - `timetable.js`: Parses NUSMods timetable share links, retrieves lesson data from the NUSMods API, maps lesson venues to CampusDash delivery locations, and determines the next class destination.
@@ -181,6 +183,7 @@ npm test
 
 - **Utilities (`src/utils/`)**
   - **API Utility:** Tests standard REST methods (GET, POST, PATCH, PUT, DELETE, postFormData) and session-expiry handling.
+  - **Onboarding Utility:** Tests tutorial completion and unavailable browser storage handling.
   - **Password Policy:** Shared password requirements are exercised through registration, password reset, and profile component tests.
 
 - **Components (`src/components/`)**
@@ -188,6 +191,7 @@ npm test
   - **DeliveryRequestCard:** Validates UI rendering based on request conditions.
   - **DeliveryRequestDrawer:** Validates order action controls and drawer state.
   - **MessageBubble / MessageComposer:** Validates message rendering, sending, typing, and image attachment interactions.
+  - **OnboardingTour:** Validates tutorial navigation, spotlight positioning, and completion controls.
 
 - **Views (`src/views/`)**
   - **Authentication (Login/Register):** Tests username/email login, NUS email registration, password policy enforcement, registration OTP verification, loading state UI changes, toast notification triggers, and successful router redirections.

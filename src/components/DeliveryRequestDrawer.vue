@@ -219,6 +219,10 @@ const props = defineProps({
     runnerOnline: {
         type: Boolean,
         default: false
+    },
+    collapseSignal: {
+        type: Number,
+        default: 0
     }
 });
 
@@ -403,6 +407,14 @@ const didDrag = ref(false);
 const isDragging = ref(false);
 const collapsedSwipeStartX = ref(null);
 const collapsedSwipeStartY = ref(null);
+
+watch(
+    () => props.collapseSignal,
+    () => {
+        isExpanded.value = false;
+        dragHeight.value = null;
+    }
+);
 
 const drawerDragStyle = computed(() => {
     if (dragHeight.value === null) return {};
